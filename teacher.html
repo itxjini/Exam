@@ -366,12 +366,12 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:1
       </div>
 
       <div class="cfg-mode-row">
-        <button class="cfg-mode-btn active" id="mode-btn-auto" onclick="setSelectionMode('auto')">
+        <button class="cfg-mode-btn active" data-mode="auto" onclick="setSelectionMode('auto')">
           <span class="cfg-mode-icon">&#x1F3B2;</span>
           <span class="cfg-mode-label">Automatic</span>
           <span class="cfg-mode-sub">Random from bank each time</span>
         </button>
-        <button class="cfg-mode-btn" id="mode-btn-manual" onclick="setSelectionMode('manual')">
+        <button class="cfg-mode-btn" data-mode="manual" onclick="setSelectionMode('manual')">
           <span class="cfg-mode-icon">&#x270D;</span>
           <span class="cfg-mode-label">Manual</span>
           <span class="cfg-mode-sub">You pick exact questions &amp; tasks</span>
@@ -823,60 +823,79 @@ window.clearAllSubmissions=clearAllSubmissions;
 </script>
 <script>
 // ── Exam Config tab ───────────────────────────────────────────────────
-var manualSelectedQ=new Set(), manualSelectedWT=new Set(), manualSelectedET=new Set(), manualSelectedPT=new Set();
+// ── Exam Config tab ───────────────────────────────────────────────────
+var manualSelectedQ  = new Set();
+var manualSelectedWT = new Set();
+var manualSelectedET = new Set();
+var manualSelectedPT = new Set();
+var manualSelectedSW = new Set();
 
+/* ── Mode toggle ─────────────────────────────── */
+function setSelectionMode(mode){
+  document.querySelectorAll('.cfg-mode-btn').forEach(function(b){ b.classList.remove('active'); });
+  var btn = document.querySelector('.cfg-mode-btn[data-mode="'+mode+'"]');
+  if(btn) btn.classList.add('active');
+  var autoP   = document.getElementById('auto-config-panel');
+  var manualP = document.getElementById('manual-config-panel');
+  if(autoP)   autoP.style.display   = (mode==='auto')   ? 'block' : 'none';
+  if(manualP) manualP.style.display = (mode==='manual') ? 'block' : 'none';
+  if(mode==='manual') renderAllManualPanels();
+}
+window.setSelectionMode = setSelectionMode;
+// alias kept for loadConfigUI
+window.setConfigMode = setSelectionMode;
+
+/* ── Load config into UI ─────────────────────── */
 function loadConfigUI(){
-  var cfg=window._examConfig||{hwQuestions:20,wordQuestions:5,excelQuestions:5,softwareQuestions:5,wordTasks:12,excelTasks:12,pptTasks:8,timeMinutes:45,selectionMode:'auto',manualQuestions:[],manualWordTasks:[],manualExcelTasks:[],manualPptTasks:[]};
-  var set=function(id,v){var el=document.getElementById(id);if(el)el.value=v;};
-  set('cfg-hw',cfg.hwQuestions||20);
-  set('cfg-word-q',cfg.wordQuestions||5);
-  set('cfg-excel-q',cfg.excelQuestions||5);
-  set('cfg-software-q',cfg.softwareQuestions||5);
-  set('cfg-word-t',cfg.wordTasks||12);
-  set('cfg-excel-t',cfg.excelTasks||12);
-  set('cfg-ppt-t',cfg.pptTasks||8);
-  set('cfg-time',cfg.timeMinutes||45);
-  var mode=cfg.selectionMode||'auto';
-  document.querySelectorAll('.cfg-mode-btn').forEach(function(b){b.classList.remove('active');});
-  var modeBtn=document.querySelector('.cfg-mode-btn[data-mode="'+mode+'"]');
-  if(modeBtn)modeBtn.classList.add('active');
-  var autoPanel=document.getElementById('auto-config-panel');
-  var manualPanel=document.getElementById('manual-config-panel');
-  if(autoPanel)autoPanel.style.display=(mode==='auto')?'block':'none';
-  if(manualPanel)manualPanel.style.display=(mode==='manual')?'block':'none';
+  var cfg = window._examConfig || {
+    hwQuestions:20, wordQuestions:5, excelQuestions:5, softwareQuestions:5,
+    wordTasks:12, excelTasks:12, pptTasks:8, timeMinutes:45,
+    selectionMode:'auto',
+    manualQuestions:[], manualWordTasks:[], manualExcelTasks:[], manualPptTasks:[]
+  };
+  var set = function(id, v){ var el=document.getElementById(id); if(el) el.value=v; };
+  set('cfg-hw',        cfg.hwQuestions       || 20);
+  set('cfg-word-q',    cfg.wordQuestions      || 5);
+  set('cfg-excel-q',   cfg.excelQuestions     || 5);
+  set('cfg-software-q',cfg.softwareQuestions  || 5);
+  set('cfg-word-t',    cfg.wordTasks          || 12);
+  set('cfg-excel-t',   cfg.excelTasks         || 12);
+  set('cfg-ppt-t',     cfg.pptTasks           || 8);
+  set('cfg-time',      cfg.timeMinutes        || 45);
+  set('cfg-time-manual', cfg.timeMinutes      || 45);
+
+  // restore manual selections
+  manualSelectedQ.clear();  (cfg.manualQuestions  ||[]).forEach(function(x){manualSelectedQ.add(x);});
+  manualSelectedWT.clear(); (cfg.manualWordTasks  ||[]).forEach(function(x){manualSelectedWT.add(x);});
+  manualSelectedET.clear(); (cfg.manualExcelTasks ||[]).forEach(function(x){manualSelectedET.add(x);});
+  manualSelectedPT.clear(); (cfg.manualPptTasks   ||[]).forEach(function(x){manualSelectedPT.add(x);});
+
+  var mode = cfg.selectionMode || 'auto';
+  setSelectionMode(mode);
   updateConfigPreview();
 }
-window.loadConfigUI=loadConfigUI;
+window.loadConfigUI = loadConfigUI;
 
-function setConfigMode(mode){
-  document.querySelectorAll('.cfg-mode-btn').forEach(function(b){b.classList.remove('active');});
-  var btn=document.querySelector('.cfg-mode-btn[data-mode="'+mode+'"]');
-  if(btn)btn.classList.add('active');
-  var autoPanel=document.getElementById('auto-config-panel');
-  var manualPanel=document.getElementById('manual-config-panel');
-  if(autoPanel)autoPanel.style.display=(mode==='auto')?'block':'none';
-  if(manualPanel)manualPanel.style.display=(mode==='manual')?'block':'none';
-}
-window.setConfigMode=setConfigMode;
-
+/* ── Live preview updater ────────────────────── */
 function updateConfigPreview(){
-  var g=function(id){return parseInt((document.getElementById(id)||{}).value)||0;};
+  var g = function(id){ return parseInt((document.getElementById(id)||{}).value)||0; };
   var hw=g('cfg-hw'), wd=g('cfg-word-q'), ex=g('cfg-excel-q'), sw=g('cfg-software-q');
   var wt=g('cfg-word-t'), et=g('cfg-excel-t'), pt=g('cfg-ppt-t');
-  var time=g('cfg-time')||45;
-  var totalQ=hw+wd+ex+sw, totalT=wt+et+pt;
-  var set=function(id,v){var el=document.getElementById(id);if(el)el.textContent=v;};
-  set('prev-total-q',totalQ);
-  set('prev-tasks',totalT);
-  set('prev-time',time+' min');
-  set('prev-total-marks',totalQ+'+'+totalT);
-  var bd=document.getElementById('prev-breakdown');
-  if(bd)bd.innerHTML='<span class="cfg-chip chip-hw">Hardware: '+hw+'</span>'
-    +'<span class="cfg-chip chip-wd">MS Word: '+wd+'</span>'
-    +'<span class="cfg-chip chip-ex">MS Excel: '+ex+'</span>'
-    +'<span class="cfg-chip chip-sw">Software: '+sw+'</span>';
+  var time = g('cfg-time') || 45;
+  var totalQ = hw+wd+ex+sw, totalT = wt+et+pt;
+  var setText = function(id,v){ var el=document.getElementById(id); if(el) el.textContent=v; };
+  setText('prev-total-q',     totalQ);
+  setText('prev-tasks',       totalT);
+  setText('prev-time',        time+' min');
+  setText('prev-total-marks', totalQ+'+'+totalT);
+  var bd = document.getElementById('prev-breakdown');
+  if(bd) bd.innerHTML =
+    '<span class="cfg-chip chip-hw">Hardware: '+hw+'</span>'
+   +'<span class="cfg-chip chip-wd">MS Word: '+wd+'</span>'
+   +'<span class="cfg-chip chip-ex">MS Excel: '+ex+'</span>'
+   +'<span class="cfg-chip chip-sw">Software: '+sw+'</span>';
   // warnings
-  var warns='', warnEl=document.getElementById('cfg-warnings');
+  var warns = '';
   if(hw>84)warns+='<div class="cfg-warn">⚠ Hardware: only 84 questions available</div>';
   if(wd>67)warns+='<div class="cfg-warn">⚠ MS Word: only 67 questions available</div>';
   if(ex>70)warns+='<div class="cfg-warn">⚠ MS Excel: only 70 questions available</div>';
@@ -884,49 +903,260 @@ function updateConfigPreview(){
   if(wt>42)warns+='<div class="cfg-warn">⚠ Word Tasks: only 42 available</div>';
   if(et>45)warns+='<div class="cfg-warn">⚠ Excel Tasks: only 45 available</div>';
   if(pt>20)warns+='<div class="cfg-warn">⚠ PPT Tasks: only 20 available</div>';
-  if(warnEl)warnEl.innerHTML=warns;
-  var badge=document.getElementById('config-status-badge');
-  if(badge){badge.textContent='Unsaved ●';badge.classList.add('badge-unsaved');}
+  var warnEl = document.getElementById('cfg-warnings');
+  if(warnEl) warnEl.innerHTML = warns;
+  var badge = document.getElementById('config-status-badge');
+  if(badge){ badge.textContent='Unsaved ●'; badge.classList.add('badge-unsaved'); }
 }
-window.updateConfigPreview=updateConfigPreview;
-// keep alias for old references
-window.updateTotals=updateConfigPreview;
+window.updateConfigPreview = updateConfigPreview;
+window.updateTotals = updateConfigPreview;
 
+/* ── Manual counts badge updater ─────────────── */
+function updateManualCounts(){
+  var totalQ = manualSelectedQ.size + manualSelectedWT.size + manualSelectedET.size + manualSelectedPT.size + manualSelectedSW.size;
+  var setText = function(id,v){ var el=document.getElementById(id); if(el) el.textContent=v; };
+  setText('manual-q-count',  manualSelectedQ.size + manualSelectedSW.size + ' questions selected');
+  setText('manual-wt-count', manualSelectedWT.size + ' Word tasks selected');
+  setText('manual-et-count', manualSelectedET.size + ' Excel tasks selected');
+  setText('manual-pt-count', manualSelectedPT.size + ' PPT tasks selected');
+  // update tab counts
+  setText('mc-hw',       manualSelectedQ.size +'/84');
+  setText('mc-software-q', manualSelectedSW.size+'/36');
+  setText('mc-word-t',   manualSelectedWT.size+'/42');
+  setText('mc-excel-t',  manualSelectedET.size+'/45');
+  setText('mc-ppt-t',    manualSelectedPT.size+'/20');
+  var badge = document.getElementById('config-status-badge');
+  if(badge){ badge.textContent='Unsaved ●'; badge.classList.add('badge-unsaved'); }
+}
+window.updateManualCounts = updateManualCounts;
+
+/* ── Manual panel tab switcher ───────────────── */
+function switchManualTab(tab){
+  document.querySelectorAll('.mtab').forEach(function(b){ b.classList.remove('active'); });
+  document.querySelectorAll('.manual-panel').forEach(function(p){ p.classList.remove('active'); });
+  var btn = document.getElementById('mtab-'+tab);
+  var panel = document.getElementById('manual-panel-'+tab);
+  if(btn)   btn.classList.add('active');
+  if(panel) panel.classList.add('active');
+}
+window.switchManualTab = switchManualTab;
+
+/* ── Render all manual panels from cached bank ── */
+function renderAllManualPanels(){
+  try{
+    var qBank  = JSON.parse(localStorage.getItem('exam_question_bank_cache')||'[]');
+    var wBank  = JSON.parse(localStorage.getItem('exam_word_task_bank_cache')||'[]');
+    var eBank  = JSON.parse(localStorage.getItem('exam_excel_task_bank_cache')||'[]');
+    var pBank  = JSON.parse(localStorage.getItem('exam_ppt_task_bank_cache')||'[]');
+
+    var hw   = qBank.filter(function(q){return q.section==='Hardware';});
+    var wordQ= qBank.filter(function(q){return q.section==='MS Word';});
+    var exQ  = qBank.filter(function(q){return q.section==='MS Excel';});
+    var swQ  = qBank.filter(function(q){return q.section==='Software';});
+
+    renderQPanel('manual-panel-hw',       hw,    manualSelectedQ,  'hw',  false);
+    renderQPanel('manual-panel-word-q',   wordQ, manualSelectedQ,  'wq',  false);
+    renderQPanel('manual-panel-excel-q',  exQ,   manualSelectedQ,  'eq',  false);
+    renderQPanel('manual-panel-software-q',swQ,  manualSelectedSW, 'sw',  false);
+    renderTaskPanel('manual-panel-word-t',  wBank, manualSelectedWT, 'wt', 'word');
+    renderTaskPanel('manual-panel-excel-t', eBank, manualSelectedET, 'et', 'excel');
+    renderTaskPanel('manual-panel-ppt-t',   pBank, manualSelectedPT, 'pt', 'ppt');
+
+    // update tab counts from bank sizes
+    var setText = function(id,v){ var el=document.getElementById(id); if(el) el.textContent=v; };
+    setText('mc-hw',         manualSelectedQ.size+'/'+hw.length);
+    setText('mc-word-q',     ''+wordQ.length);
+    setText('mc-excel-q',    ''+exQ.length);
+    setText('mc-software-q', manualSelectedSW.size+'/'+swQ.length);
+    setText('mc-word-t',     manualSelectedWT.size+'/'+wBank.length);
+    setText('mc-excel-t',    manualSelectedET.size+'/'+eBank.length);
+    setText('mc-ppt-t',      manualSelectedPT.size+'/'+pBank.length);
+    updateManualCounts();
+  } catch(e){ console.warn('Bank cache missing — open exam page first to populate cache.'); }
+}
+
+function renderQPanel(panelId, questions, selectedSet, prefix, isTask){
+  var panel = document.getElementById(panelId);
+  if(!panel) return;
+  // group by topic
+  var groups = {};
+  questions.forEach(function(q){
+    var t = q.topic||q.section||'General';
+    if(!groups[t]) groups[t]=[];
+    groups[t].push(q);
+  });
+  var html = '<div class="manual-search-wrap" style="margin-bottom:12px;">'
+    +'<input class="manual-search" placeholder="Search questions..." oninput="filterPanel(this,\''+panelId+'\')" />'
+    +'</div>';
+  var selAll = '<div class="manual-select-row">'
+    +'<button class="msr-btn" onclick="selectAllInPanel(\''+panelId+'\',true)">Select All</button>'
+    +'<button class="msr-btn" onclick="selectAllInPanel(\''+panelId+'\',false)">Clear All</button>'
+    +'<span class="msr-label">'+questions.length+' questions total</span></div>';
+  html += selAll;
+  Object.keys(groups).sort().forEach(function(topic){
+    html += '<div class="topic-group">';
+    html += '<div class="tg-header">'+topic+' <span style="font-weight:400;color:var(--muted);">('+groups[topic].length+')</span></div>';
+    groups[topic].forEach(function(q){
+      var sel = selectedSet.has(q.id);
+      html += '<div class="q-row'+(sel?' selected':'')+'" onclick="toggleQ(this,'+JSON.stringify(q.id)+',\''+panelId+'\')" data-q="'+q.id+'" data-text="'+escapeAttr((q.q||'').toLowerCase())+'">'
+        +'<div class="q-check"><svg viewBox="0 0 12 12" fill="none" stroke="#fff" stroke-width="2.5"><polyline points="1.5,6 4.5,9.5 10.5,2"/></svg></div>'
+        +'<div class="q-text">'+q.q+'<div class="q-meta">ID: '+q.id+' · '+q.diff+'</div></div>'
+        +'</div>';
+    });
+    html += '</div>';
+  });
+  panel.innerHTML = html;
+  // attach toggle logic via closure
+  panel._set = selectedSet;
+}
+
+function renderTaskPanel(panelId, tasks, selectedSet, prefix, type){
+  var panel = document.getElementById(panelId);
+  if(!panel) return;
+  var colorMap = {word:'var(--blue)', excel:'var(--orange)', ppt:'var(--gold)'};
+  var col = colorMap[type]||'var(--cyan)';
+  var groups = {};
+  tasks.forEach(function(t){
+    var tp = t.topic||'General';
+    if(!groups[tp]) groups[tp]=[];
+    groups[tp].push(t);
+  });
+  var html = '<div class="manual-search-wrap" style="margin-bottom:12px;">'
+    +'<input class="manual-search" placeholder="Search tasks..." oninput="filterPanel(this,\''+panelId+'\')" />'
+    +'</div>'
+    +'<div class="manual-select-row">'
+    +'<button class="msr-btn" onclick="selectAllInPanel(\''+panelId+'\',true)">Select All</button>'
+    +'<button class="msr-btn" onclick="selectAllInPanel(\''+panelId+'\',false)">Clear All</button>'
+    +'<span class="msr-label">'+tasks.length+' tasks total</span></div>';
+  Object.keys(groups).sort().forEach(function(topic){
+    html += '<div class="topic-group">';
+    html += '<div class="tg-header" style="color:'+col+'">'+topic+'</div>';
+    groups[topic].forEach(function(t){
+      var sel = selectedSet.has(t.id);
+      var plain = (t.desc||'').replace(/<[^>]+>/g,'');
+      html += '<div class="task-row'+(sel?' selected':'')+'" onclick="toggleTask(this,\''+t.id+'\',\''+panelId+'\')" data-q="'+t.id+'" data-text="'+escapeAttr(plain.toLowerCase())+'">'
+        +'<div class="q-check"><svg viewBox="0 0 12 12" fill="none" stroke="#fff" stroke-width="2.5"><polyline points="1.5,6 4.5,9.5 10.5,2"/></svg></div>'
+        +'<div class="t-id">'+t.id+'</div>'
+        +'<div class="q-text"><span class="t-topic">'+topic+'</span> — '+plain.slice(0,90)+(plain.length>90?'…':'')
+        +'<div class="q-meta">'+t.marks+' mark'+(t.marks>1?'s':'')+'</div></div>'
+        +'<div class="q-marks">'+t.marks+'M</div>'
+        +'</div>';
+    });
+    html += '</div>';
+  });
+  panel.innerHTML = html;
+  panel._set = selectedSet;
+}
+
+function escapeAttr(s){ return (s||'').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+
+function toggleQ(row, qId, panelId){
+  var panel = document.getElementById(panelId);
+  // figure out which set this panel uses
+  var set;
+  if(panelId==='manual-panel-software-q') set=manualSelectedSW;
+  else set=manualSelectedQ;
+  if(set.has(qId)){ set.delete(qId); row.classList.remove('selected'); }
+  else             { set.add(qId);   row.classList.add('selected'); }
+  updateManualCounts();
+}
+window.toggleQ = toggleQ;
+
+function toggleTask(row, taskId, panelId){
+  var set;
+  if(panelId==='manual-panel-word-t')  set=manualSelectedWT;
+  else if(panelId==='manual-panel-excel-t') set=manualSelectedET;
+  else if(panelId==='manual-panel-ppt-t')   set=manualSelectedPT;
+  else return;
+  if(set.has(taskId)){ set.delete(taskId); row.classList.remove('selected'); }
+  else               { set.add(taskId);    row.classList.add('selected'); }
+  updateManualCounts();
+}
+window.toggleTask = toggleTask;
+
+function selectAllInPanel(panelId, selectAll){
+  var panel = document.getElementById(panelId);
+  if(!panel) return;
+  var isTask = panelId.endsWith('-t');
+  var rows = panel.querySelectorAll(isTask?'.task-row':'.q-row');
+  var set;
+  if(panelId==='manual-panel-software-q') set=manualSelectedSW;
+  else if(panelId==='manual-panel-word-t')  set=manualSelectedWT;
+  else if(panelId==='manual-panel-excel-t') set=manualSelectedET;
+  else if(panelId==='manual-panel-ppt-t')   set=manualSelectedPT;
+  else set=manualSelectedQ;
+  rows.forEach(function(row){
+    var id = row.getAttribute('data-q');
+    if(!id) return;
+    // try number conversion for question ids
+    var key = isNaN(id) ? id : parseInt(id);
+    if(selectAll){ set.add(key); row.classList.add('selected'); }
+    else         { set.delete(key); row.classList.remove('selected'); }
+  });
+  updateManualCounts();
+}
+window.selectAllInPanel = selectAllInPanel;
+
+function filterPanel(input, panelId){
+  var q = input.value.toLowerCase();
+  var panel = document.getElementById(panelId);
+  if(!panel) return;
+  panel.querySelectorAll('[data-text]').forEach(function(row){
+    row.style.display = row.getAttribute('data-text').includes(q) ? '' : 'none';
+  });
+}
+window.filterPanel = filterPanel;
+
+/* ── Save / Reset ────────────────────────────── */
 function saveExamConfig(){
-  var mode=document.querySelector('.cfg-mode-btn.active');
-  var selMode=(mode?mode.getAttribute('data-mode'):'auto')||'auto';
-  var g=function(id,def){return parseInt((document.getElementById(id)||{}).value)||def;};
+  var modeBtns = document.querySelectorAll('.cfg-mode-btn.active');
+  var selMode = modeBtns.length ? (modeBtns[0].getAttribute('data-mode')||'auto') : 'auto';
+  var g = function(id, def){ return parseInt((document.getElementById(id)||{}).value)||def; };
   var hw=g('cfg-hw',20), wd=g('cfg-word-q',5), ex=g('cfg-excel-q',5), sw=g('cfg-software-q',5);
   var wt=g('cfg-word-t',12), et=g('cfg-excel-t',12), pt=g('cfg-ppt-t',8);
-  var tm=g('cfg-time',45);
-  if(hw<0||wd<0||ex<0||sw<0||wt<1||et<1||pt<1||tm<1){alert('Values must be valid (tasks at least 1).');return;}
-  var config={
+  var tm = selMode==='manual'
+    ? (g('cfg-time-manual',45))
+    : g('cfg-time',45);
+  if(wt<1||et<1||pt<1||tm<1){ alert('Task counts and duration must be at least 1.'); return; }
+  // combine HW+Word+Excel questions into manualQuestions; Software is separate
+  var allManualQ = selMode==='manual'
+    ? Array.from(manualSelectedQ)
+    : [];
+  var config = {
     hwQuestions:hw, wordQuestions:wd, excelQuestions:ex, softwareQuestions:sw,
     wordTasks:wt, excelTasks:et, pptTasks:pt, timeMinutes:tm,
-    selectionMode:selMode,
-    manualQuestions:selMode==='manual'?Array.from(manualSelectedQ):[],
-    manualWordTasks:selMode==='manual'?Array.from(manualSelectedWT):[],
-    manualExcelTasks:selMode==='manual'?Array.from(manualSelectedET):[],
-    manualPptTasks:selMode==='manual'?Array.from(manualSelectedPT):[]
+    selectionMode: selMode,
+    manualQuestions:   allManualQ,
+    manualWordTasks:   selMode==='manual' ? Array.from(manualSelectedWT) : [],
+    manualExcelTasks:  selMode==='manual' ? Array.from(manualSelectedET) : [],
+    manualPptTasks:    selMode==='manual' ? Array.from(manualSelectedPT) : [],
+    manualSoftwareQuestions: selMode==='manual' ? Array.from(manualSelectedSW) : []
   };
   _fbSaveConfig(config).then(function(){
-    var badge=document.getElementById('config-status-badge');
-    if(badge){badge.textContent='Saved ✓';badge.classList.remove('badge-unsaved');}
-    var msg=document.getElementById('config-saved-msg');
-    if(msg){msg.style.display='inline';setTimeout(function(){msg.style.display='none';},4000);}
-  }).catch(function(e){alert('Save failed: '+e.message);});
+    var badge = document.getElementById('config-status-badge');
+    if(badge){ badge.textContent='Saved ✓'; badge.classList.remove('badge-unsaved'); }
+    var msg = document.getElementById('config-saved-msg');
+    if(msg){ msg.style.display='inline'; setTimeout(function(){msg.style.display='none';},4000); }
+  }).catch(function(e){ alert('Save failed: '+e.message); });
 }
-window.saveExamConfig=saveExamConfig;
+window.saveExamConfig = saveExamConfig;
 
 function resetExamConfig(){
-  if(!confirm('Reset to defaults?'))return;
-  var defaults={hwQuestions:20,wordQuestions:5,excelQuestions:5,softwareQuestions:5,wordTasks:12,excelTasks:12,pptTasks:8,timeMinutes:45,selectionMode:'auto',manualQuestions:[],manualWordTasks:[],manualExcelTasks:[],manualPptTasks:[]};
+  if(!confirm('Reset to defaults?')) return;
+  var defaults = {
+    hwQuestions:20, wordQuestions:5, excelQuestions:5, softwareQuestions:5,
+    wordTasks:12, excelTasks:12, pptTasks:8, timeMinutes:45,
+    selectionMode:'auto',
+    manualQuestions:[], manualWordTasks:[], manualExcelTasks:[], manualPptTasks:[], manualSoftwareQuestions:[]
+  };
   _fbSaveConfig(defaults).then(function(){
-    manualSelectedQ.clear();manualSelectedWT.clear();manualSelectedET.clear();manualSelectedPT.clear();
-    window._examConfig=defaults; loadConfigUI();
-  }).catch(function(e){alert('Reset failed: '+e.message);});
+    manualSelectedQ.clear(); manualSelectedWT.clear();
+    manualSelectedET.clear(); manualSelectedPT.clear(); manualSelectedSW.clear();
+    window._examConfig = defaults;
+    loadConfigUI();
+  }).catch(function(e){ alert('Reset failed: '+e.message); });
 }
-window.resetExamConfig=resetExamConfig;
+window.resetExamConfig = resetExamConfig;
 
 function letterGrade(t){
   if(t==null)return 'N/A';
