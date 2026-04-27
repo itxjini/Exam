@@ -4,7 +4,12 @@ import {
 
 const DEFAULT_CONFIG = {
   hwQuestions:20, wordQuestions:5, excelQuestions:5, softwareQuestions:5,
-  wordTasks:12, excelTasks:12, pptTasks:8, timeMinutes:45,
+  // marks-based practicals (new system)
+  wordMarks:25, excelMarks:25, pptMarks:20,
+  // legacy count fields (kept for backward compat)
+  wordTasks:12, excelTasks:12, pptTasks:8,
+  useMarksMode: true,
+  timeMinutes:45,
   selectionMode:'auto',
   manualQuestions:[], manualWordTasks:[], manualExcelTasks:[], manualPptTasks:[]
 };
@@ -17,6 +22,7 @@ let wordFileData=null, excelFileData=null, pptFileData=null;
 let examSubmitted=false, examConfig=null;
 let allowedStudents=[], submittedNames=new Set();
 
+/* ── Particles ─────────────────────────────────────── */
 (function initParticles(){
   const canvas=document.getElementById('particles');
   const ctx=canvas.getContext('2d');
@@ -55,6 +61,7 @@ let allowedStudents=[], submittedNames=new Set();
   window.addEventListener('resize',()=>{resize();createDots(65);});
 })();
 
+/* ── Init ──────────────────────────────────────────── */
 async function init(){
   try {
     const [config, students] = await Promise.all([loadExamConfig(), loadAllowedStudents()]);
@@ -73,16 +80,17 @@ async function init(){
 function populateLandingConfig(){
   if(!examConfig)return;
   const c=examConfig;
-  const total=(c.hwQuestions||0)+(c.wordQuestions||0)+(c.excelQuestions||0);
+  const useMarks = c.useMarksMode !== false;
+  const total=(c.hwQuestions||0)+(c.wordQuestions||0)+(c.excelQuestions||0)+(c.softwareQuestions||0);
   const setEl=(id,val)=>{const el=document.getElementById(id);if(el)el.textContent=val;};
   setEl('lc-mcq', c.selectionMode==='manual'?(c.manualQuestions||[]).length:total);
-  setEl('lc-word-tasks', c.selectionMode==='manual'?(c.manualWordTasks||[]).length:(c.wordTasks||0));
-  setEl('lc-excel-tasks', c.selectionMode==='manual'?(c.manualExcelTasks||[]).length:(c.excelTasks||0));
-  setEl('lc-ppt-tasks', c.selectionMode==='manual'?(c.manualPptTasks||[]).length:(c.pptTasks||8));
+  setEl('lc-word-tasks',  useMarks ? (c.wordMarks||25)+' Marks'  : (c.wordTasks||12));
+  setEl('lc-excel-tasks', useMarks ? (c.excelMarks||25)+' Marks' : (c.excelTasks||12));
+  setEl('lc-ppt-tasks',   useMarks ? (c.pptMarks||20)+' Marks'   : (c.pptTasks||8));
   setEl('lc-time', c.timeMinutes||45);
-  setEl('eib-hw',    c.selectionMode==='manual'?((c.manualQuestions||[]).length)+' Qs (manual)':(c.hwQuestions||0)+' Qs');
-  setEl('eib-word',  c.selectionMode==='manual'?'—':(c.wordQuestions||0)+' Qs');
-  setEl('eib-excel', c.selectionMode==='manual'?'—':(c.excelQuestions||0)+' Qs');
+  setEl('eib-hw',    (c.hwQuestions||0)+' Qs');
+  setEl('eib-word',  (c.wordQuestions||0)+' Qs');
+  setEl('eib-excel', (c.excelQuestions||0)+' Qs');
   setEl('eib-ppt',   'Practical');
 }
 
@@ -132,10 +140,18 @@ async function startExam(){
     PPT_TASKS   =pt.map((t,i)=>({...t,num:i+1}));
   } else {
     QUESTIONS=window.buildExamQuestions(c.hwQuestions||20,c.wordQuestions||5,c.excelQuestions||5,c.softwareQuestions||5);
-    const tasks=window.buildPracticalTasks(c.wordTasks||12,c.excelTasks||12,c.pptTasks||8);
+    const useMarks = c.useMarksMode !== false;
+    const wParam  = useMarks ? (c.wordMarks||25)  : (c.wordTasks||12);
+    const eParam  = useMarks ? (c.excelMarks||25) : (c.excelTasks||12);
+    const pParam  = useMarks ? (c.pptMarks||20)   : (c.pptTasks||8);
+    const tasks=window.buildPracticalTasks(wParam, eParam, pParam);
     WORD_TASKS  =tasks.wordTasks;
     EXCEL_TASKS =tasks.excelTasks;
     PPT_TASKS   =tasks.pptTasks;
+    // inject dynamic Word topic
+    injectWordTopic(tasks.wordTopic);
+    // inject dynamic Excel dataset
+    injectExcelDataset(tasks.excelDataset);
   }
 
   userAnswers=new Array(QUESTIONS.length).fill(null);
@@ -144,9 +160,9 @@ async function startExam(){
   document.getElementById('ring-text').textContent='0/'+QUESTIONS.length;
   const setEl=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
   setEl('mcq-score-total','/'+QUESTIONS.length);
-  const wMarks=WORD_TASKS.reduce((s,t)=>s+t.marks,0);
-  const eMarks=EXCEL_TASKS.reduce((s,t)=>s+t.marks,0);
-  const pMarks=PPT_TASKS.reduce((s,t)=>s+t.marks,0);
+  const wMarks=WORD_TASKS.reduce((s,t)=>s+(t.marks||0),0);
+  const eMarks=EXCEL_TASKS.reduce((s,t)=>s+(t.marks||0),0);
+  const pMarks=PPT_TASKS.reduce((s,t)=>s+(t.marks||0),0);
   setEl('ptab-word-marks',wMarks+' Marks');
   setEl('ptab-excel-marks',eMarks+' Marks');
   setEl('ptab-ppt-marks',pMarks+' Marks');
@@ -165,6 +181,36 @@ function showNameError(inp,errEl,msg){
   inp.style.borderColor='#f87171';inp.style.boxShadow='0 0 0 4px rgba(248,113,113,.2)';
   errEl.style.display='block';errEl.textContent=msg;
   setTimeout(()=>{inp.style.borderColor='';inp.style.boxShadow='';errEl.style.display='none';},4500);
+}
+
+/* ── Dynamic topic/dataset injectors ───────────────────── */
+function injectWordTopic(topic) {
+  if (!topic) return;
+  const box = document.querySelector('#tab-word .prac-context-box div:last-child');
+  if (!box) return;
+  box.innerHTML = `<strong>Document Topic:</strong> Create a Word document titled <em>"${topic.title} — ${topic.subtitle}"</em>.<br/><br/>${topic.instructions}<br/><br/><strong>Save As:</strong> <code>${topic.saveAs}</code>`;
+}
+
+function injectExcelDataset(ds) {
+  if (!ds) return;
+  // update context box
+  const box = document.querySelector('#tab-excel .prac-context-box div:last-child');
+  if (box) {
+    box.innerHTML = `<strong>${ds.description}</strong><br/><em>${ds.note||''}</em><br/><br/><strong>Save As:</strong> <code>${ds.saveAs}</code>`;
+  }
+  // rebuild the table
+  const wrap = document.querySelector('.excel-data-table-wrap');
+  if (!wrap || !ds.headers) return;
+  const fCell = '<td class="formula-cell">(formula)</td>';
+  let rows = ds.rows.map(row => {
+    return '<tr>' + row.map(cell =>
+      cell === '(formula)' ? fCell : `<td>${cell}</td>`
+    ).join('') + '</tr>';
+  }).join('');
+  wrap.innerHTML = `<table class="excel-preview-table">
+    <thead><tr>${ds.headers.map(h=>`<th>${h}</th>`).join('')}</tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
 }
 
 /* ── Timer ─────────────────────────────────────────── */
