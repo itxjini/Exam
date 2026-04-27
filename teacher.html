@@ -391,25 +391,42 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:1
             </div>
           </div>
           <div class="panel-card">
-            <div class="pc-head">&#x1F6E0; Practical Task Count</div>
+            <div class="pc-head">&#x1F6E0; Practical Marks Allocation</div>
             <div class="cfg-section-divider"></div>
-            <div style="display:flex;flex-direction:column;gap:18px;">
-              <div class="cfg-field"><label class="cfg-label">&#x1F4DD; Word Tasks to Assign</label><div class="cfg-row"><input class="cfg-input" id="cfg-word-t" type="number" min="1" max="42" value="12" oninput="updateConfigPreview()"/><span class="cfg-max">/ 42 available</span></div></div>
-              <div class="cfg-field"><label class="cfg-label">&#x1F4CA; Excel Tasks to Assign</label><div class="cfg-row"><input class="cfg-input" id="cfg-excel-t" type="number" min="1" max="45" value="12" oninput="updateConfigPreview()"/><span class="cfg-max">/ 45 available</span></div></div>
-              <div class="cfg-field"><label class="cfg-label">&#x1F4FD;&#xFE0F; PPT Tasks to Assign</label><div class="cfg-row"><input class="cfg-input" id="cfg-ppt-t" type="number" min="1" max="20" value="8" oninput="updateConfigPreview()"/><span class="cfg-max">/ 20 available</span></div></div>
-              <div class="cfg-field"><label class="cfg-label">&#x23F1; Exam Duration</label><div class="cfg-row"><input class="cfg-input" id="cfg-time" type="number" min="10" max="180" value="45" oninput="updateConfigPreview()"/><span class="cfg-max">minutes</span></div></div>
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px;padding:10px 14px;background:rgba(79,142,247,.06);border:1px solid rgba(79,142,247,.15);border-radius:10px;">
+              <span style="font-size:12px;color:var(--muted);font-family:var(--mono);">Mode:</span>
+              <button class="marks-mode-btn active" id="marks-mode-btn" onclick="setTaskMode('marks')" style="font-size:12px;padding:5px 14px;border-radius:8px;border:1px solid var(--blue);background:rgba(79,142,247,.15);color:var(--blue);cursor:pointer;font-family:var(--mono);">🎯 By Marks</button>
+              <button class="marks-mode-btn" id="count-mode-btn" onclick="setTaskMode('count')" style="font-size:12px;padding:5px 14px;border-radius:8px;border:1px solid var(--glass-border);background:transparent;color:var(--muted);cursor:pointer;font-family:var(--mono);">🔢 By Count</button>
             </div>
+            <div id="marks-mode-panel" style="display:flex;flex-direction:column;gap:18px;">
+              <div class="cfg-field"><label class="cfg-label">📝 Word Tasks — Total Marks</label><div class="cfg-row"><input class="cfg-input" id="cfg-word-marks" type="number" min="1" max="99" value="25" oninput="updateConfigPreview()"/><span class="cfg-max">marks target</span></div></div>
+              <div class="cfg-field"><label class="cfg-label">📊 Excel Tasks — Total Marks</label><div class="cfg-row"><input class="cfg-input" id="cfg-excel-marks" type="number" min="1" max="99" value="25" oninput="updateConfigPreview()"/><span class="cfg-max">marks target</span></div></div>
+              <div class="cfg-field"><label class="cfg-label">📽️ PPT Tasks — Total Marks</label><div class="cfg-row"><input class="cfg-input" id="cfg-ppt-marks" type="number" min="1" max="50" value="20" oninput="updateConfigPreview()"/><span class="cfg-max">marks target</span></div></div>
+              <div style="padding:10px 14px;background:rgba(52,211,153,.06);border:1px solid rgba(52,211,153,.15);border-radius:10px;font-size:12px;color:var(--green);font-family:var(--mono);">✅ System auto-picks tasks that add up to exactly these marks.</div>
+            </div>
+            <div id="count-mode-panel" style="display:none;flex-direction:column;gap:18px;">
+              <div class="cfg-field"><label class="cfg-label">📝 Word Tasks to Assign</label><div class="cfg-row"><input class="cfg-input" id="cfg-word-t" type="number" min="1" max="42" value="12" oninput="updateConfigPreview()"/><span class="cfg-max">/ 42 available</span></div></div>
+              <div class="cfg-field"><label class="cfg-label">📊 Excel Tasks to Assign</label><div class="cfg-row"><input class="cfg-input" id="cfg-excel-t" type="number" min="1" max="45" value="12" oninput="updateConfigPreview()"/><span class="cfg-max">/ 45 available</span></div></div>
+              <div class="cfg-field"><label class="cfg-label">📽️ PPT Tasks to Assign</label><div class="cfg-row"><input class="cfg-input" id="cfg-ppt-t" type="number" min="1" max="20" value="8" oninput="updateConfigPreview()"/><span class="cfg-max">/ 20 available</span></div></div>
+            </div>
+            <div class="cfg-section-divider" style="margin:18px 0;"></div>
+            <div class="cfg-field"><label class="cfg-label">⏱ Exam Duration</label><div class="cfg-row"><input class="cfg-input" id="cfg-time" type="number" min="10" max="180" value="45" oninput="updateConfigPreview()"/><span class="cfg-max">minutes</span></div></div>
           </div>
         </div>
 
         <div class="panel-card" style="margin-bottom:20px;">
           <div class="pc-head">&#x1F441; Live Preview</div>
           <div class="cfg-section-divider"></div>
-          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px;">
-            <div class="cfg-stat"><div class="cfs-val" id="prev-total-q">35</div><div class="cfs-lbl">Total MCQs</div></div>
-            <div class="cfg-stat"><div class="cfs-val" id="prev-tasks">32</div><div class="cfs-lbl">Total Tasks</div></div>
+          <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:18px;">
+            <div class="cfg-stat"><div class="cfs-val" id="prev-total-q">35</div><div class="cfs-lbl">MCQs</div></div>
+            <div class="cfg-stat"><div class="cfs-val" id="prev-word-marks" style="color:var(--blue)">25M</div><div class="cfs-lbl">Word Marks</div></div>
+            <div class="cfg-stat"><div class="cfs-val" id="prev-excel-marks" style="color:var(--orange)">25M</div><div class="cfs-lbl">Excel Marks</div></div>
+            <div class="cfg-stat"><div class="cfs-val" id="prev-ppt-marks" style="color:var(--gold)">20M</div><div class="cfs-lbl">PPT Marks</div></div>
+            <div class="cfg-stat"><div class="cfs-val" id="prev-grand-total" style="color:var(--green)">100</div><div class="cfs-lbl">Grand Total</div></div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:18px;">
+            <div class="cfg-stat"><div class="cfs-val" id="prev-tasks">—</div><div class="cfs-lbl">Practical Mode</div></div>
             <div class="cfg-stat"><div class="cfs-val" id="prev-time">45 min</div><div class="cfs-lbl">Duration</div></div>
-            <div class="cfg-stat"><div class="cfs-val" id="prev-total-marks">35+32</div><div class="cfs-lbl">MCQ + Tasks</div></div>
           </div>
           <div style="margin-bottom:10px;"><div style="font-size:11px;font-family:var(--mono);color:var(--muted);margin-bottom:10px;text-transform:uppercase;letter-spacing:.8px;">MCQ Breakdown</div><div style="display:flex;gap:8px;flex-wrap:wrap;" id="prev-breakdown"><span class="cfg-chip chip-hw">Hardware: 20</span><span class="cfg-chip chip-wd">MS Word: 5</span><span class="cfg-chip chip-ex">MS Excel: 5</span><span class="cfg-chip chip-sw">Software: 5</span></div></div>
           <div id="cfg-warnings"></div>
@@ -858,11 +875,18 @@ function loadConfigUI(){
   set('cfg-word-q',    cfg.wordQuestions      || 5);
   set('cfg-excel-q',   cfg.excelQuestions     || 5);
   set('cfg-software-q',cfg.softwareQuestions  || 5);
-  set('cfg-word-t',    cfg.wordTasks          || 12);
-  set('cfg-excel-t',   cfg.excelTasks         || 12);
-  set('cfg-ppt-t',     cfg.pptTasks           || 8);
-  set('cfg-time',      cfg.timeMinutes        || 45);
-  set('cfg-time-manual', cfg.timeMinutes      || 45);
+  set('cfg-word-marks', cfg.wordMarks  || 25);
+  set('cfg-excel-marks',cfg.excelMarks || 25);
+  set('cfg-ppt-marks',  cfg.pptMarks   || 20);
+  set('cfg-word-t',    cfg.wordTasks  || 12);
+  set('cfg-excel-t',   cfg.excelTasks || 12);
+  set('cfg-ppt-t',     cfg.pptTasks   || 8);
+  set('cfg-time',      cfg.timeMinutes || 45);
+  set('cfg-time-manual', cfg.timeMinutes || 45);
+  // restore task mode
+  var tMode = cfg.useMarksMode===false ? 'count' : 'marks';
+  _taskMode = tMode;
+  setTaskMode(tMode);
 
   // restore manual selections
   manualSelectedQ.clear();  (cfg.manualQuestions  ||[]).forEach(function(x){manualSelectedQ.add(x);});
@@ -876,33 +900,64 @@ function loadConfigUI(){
 }
 window.loadConfigUI = loadConfigUI;
 
-/* ── Live preview updater ────────────────────── */
+var _taskMode = 'marks'; // 'marks' or 'count'
+function setTaskMode(mode){
+  _taskMode = mode;
+  var marksP = document.getElementById('marks-mode-panel');
+  var countP = document.getElementById('count-mode-panel');
+  var marksBtn = document.getElementById('marks-mode-btn');
+  var countBtn = document.getElementById('count-mode-btn');
+  if(marksP) marksP.style.display = mode==='marks' ? 'flex' : 'none';
+  if(countP) countP.style.display = mode==='count' ? 'flex' : 'none';
+  if(marksBtn){ marksBtn.style.background = mode==='marks'?'rgba(79,142,247,.15)':'transparent'; marksBtn.style.color = mode==='marks'?'var(--blue)':'var(--muted)'; marksBtn.style.borderColor = mode==='marks'?'var(--blue)':'var(--glass-border)'; }
+  if(countBtn){ countBtn.style.background = mode==='count'?'rgba(79,142,247,.15)':'transparent'; countBtn.style.color = mode==='count'?'var(--blue)':'var(--muted)'; countBtn.style.borderColor = mode==='count'?'var(--blue)':'var(--glass-border)'; }
+  updateConfigPreview();
+}
+window.setTaskMode = setTaskMode;
 function updateConfigPreview(){
   var g = function(id){ return parseInt((document.getElementById(id)||{}).value)||0; };
   var hw=g('cfg-hw'), wd=g('cfg-word-q'), ex=g('cfg-excel-q'), sw=g('cfg-software-q');
-  var wt=g('cfg-word-t'), et=g('cfg-excel-t'), pt=g('cfg-ppt-t');
   var time = g('cfg-time') || 45;
-  var totalQ = hw+wd+ex+sw, totalT = wt+et+pt;
+  var totalQ = hw+wd+ex+sw;
+  var isMarks = _taskMode === 'marks';
+  var wVal = isMarks ? g('cfg-word-marks')  : g('cfg-word-t');
+  var eVal = isMarks ? g('cfg-excel-marks') : g('cfg-excel-t');
+  var pVal = isMarks ? g('cfg-ppt-marks')   : g('cfg-ppt-t');
   var setText = function(id,v){ var el=document.getElementById(id); if(el) el.textContent=v; };
   setText('prev-total-q',     totalQ);
-  setText('prev-tasks',       totalT);
+  setText('prev-word-marks',  isMarks ? wVal+'M' : wVal+' tasks');
+  setText('prev-excel-marks', isMarks ? eVal+'M' : eVal+' tasks');
+  setText('prev-ppt-marks',   isMarks ? pVal+'M' : pVal+' tasks');
+  setText('prev-grand-total', isMarks ? (totalQ+wVal+eVal+pVal) : '—');
+  setText('prev-tasks',       isMarks ? '🎯 By Marks' : '🔢 By Count');
   setText('prev-time',        time+' min');
-  setText('prev-total-marks', totalQ+'+'+totalT);
   var bd = document.getElementById('prev-breakdown');
   if(bd) bd.innerHTML =
     '<span class="cfg-chip chip-hw">Hardware: '+hw+'</span>'
    +'<span class="cfg-chip chip-wd">MS Word: '+wd+'</span>'
    +'<span class="cfg-chip chip-ex">MS Excel: '+ex+'</span>'
    +'<span class="cfg-chip chip-sw">Software: '+sw+'</span>';
-  // warnings
+  // Grand total 100-check hint
+  if(isMarks){
+    var grandTotal = totalQ+wVal+eVal+pVal;
+    var hint = document.getElementById('grand-total-hint');
+    if(!hint){
+      hint = document.createElement('div');
+      hint.id='grand-total-hint';
+      hint.style.cssText='margin-bottom:10px;padding:10px 14px;border-radius:10px;font-size:13px;font-family:var(--mono);font-weight:700;text-align:center;';
+      var bd2 = document.getElementById('prev-breakdown');
+      if(bd2) bd2.insertAdjacentElement('afterend', hint);
+    }
+    var diff = grandTotal - 100;
+    if(diff===0){ hint.style.background='rgba(52,211,153,.1)'; hint.style.color='var(--green)'; hint.style.border='1px solid rgba(52,211,153,.2)'; hint.textContent='✅ Perfect! Grand Total = '+grandTotal+' / 100'; }
+    else if(diff>0){ hint.style.background='rgba(248,113,113,.08)'; hint.style.color='var(--red)'; hint.style.border='1px solid rgba(248,113,113,.2)'; hint.textContent='⚠ Total = '+grandTotal+' ('+diff+' over 100)'; }
+    else{ hint.style.background='rgba(251,146,60,.08)'; hint.style.color='var(--orange)'; hint.style.border='1px solid rgba(251,146,60,.2)'; hint.textContent='⚠ Total = '+grandTotal+' ('+(diff*-1)+' under 100)'; }
+  }
   var warns = '';
   if(hw>84)warns+='<div class="cfg-warn">⚠ Hardware: only 84 questions available</div>';
   if(wd>67)warns+='<div class="cfg-warn">⚠ MS Word: only 67 questions available</div>';
   if(ex>70)warns+='<div class="cfg-warn">⚠ MS Excel: only 70 questions available</div>';
   if(sw>36)warns+='<div class="cfg-warn">⚠ Software: only 36 questions available</div>';
-  if(wt>42)warns+='<div class="cfg-warn">⚠ Word Tasks: only 42 available</div>';
-  if(et>45)warns+='<div class="cfg-warn">⚠ Excel Tasks: only 45 available</div>';
-  if(pt>20)warns+='<div class="cfg-warn">⚠ PPT Tasks: only 20 available</div>';
   var warnEl = document.getElementById('cfg-warnings');
   if(warnEl) warnEl.innerHTML = warns;
   var badge = document.getElementById('config-status-badge');
@@ -1113,20 +1168,17 @@ function saveExamConfig(){
   var selMode = modeBtns.length ? (modeBtns[0].getAttribute('data-mode')||'auto') : 'auto';
   var g = function(id, def){ return parseInt((document.getElementById(id)||{}).value)||def; };
   var hw=g('cfg-hw',20), wd=g('cfg-word-q',5), ex=g('cfg-excel-q',5), sw=g('cfg-software-q',5);
-  var wt=g('cfg-word-t',12), et=g('cfg-excel-t',12), pt=g('cfg-ppt-t',8);
-  var tm = selMode==='manual'
-    ? (g('cfg-time-manual',45))
-    : g('cfg-time',45);
-  if(wt<1||et<1||pt<1||tm<1){ alert('Task counts and duration must be at least 1.'); return; }
-  // combine HW+Word+Excel questions into manualQuestions; Software is separate
-  var allManualQ = selMode==='manual'
-    ? Array.from(manualSelectedQ)
-    : [];
+  var isMarks = _taskMode === 'marks';
+  var wMarks=g('cfg-word-marks',25), eMarks=g('cfg-excel-marks',25), pMarks=g('cfg-ppt-marks',20);
+  var wCount=g('cfg-word-t',12), eCount=g('cfg-excel-t',12), pCount=g('cfg-ppt-t',8);
+  var tm = selMode==='manual' ? g('cfg-time-manual',45) : g('cfg-time',45);
   var config = {
     hwQuestions:hw, wordQuestions:wd, excelQuestions:ex, softwareQuestions:sw,
-    wordTasks:wt, excelTasks:et, pptTasks:pt, timeMinutes:tm,
-    selectionMode: selMode,
-    manualQuestions:   allManualQ,
+    useMarksMode: isMarks,
+    wordMarks:wMarks, excelMarks:eMarks, pptMarks:pMarks,
+    wordTasks:wCount, excelTasks:eCount, pptTasks:pCount,
+    timeMinutes:tm, selectionMode: selMode,
+    manualQuestions:   selMode==='manual' ? Array.from(manualSelectedQ)  : [],
     manualWordTasks:   selMode==='manual' ? Array.from(manualSelectedWT) : [],
     manualExcelTasks:  selMode==='manual' ? Array.from(manualSelectedET) : [],
     manualPptTasks:    selMode==='manual' ? Array.from(manualSelectedPT) : [],
