@@ -1362,15 +1362,231 @@ const PPT_TASK_BANK = [
     desc:"Use <strong>Rehearse Timings</strong> (Slide Show → Rehearse Timings) and set each slide to display for at least 5 seconds. Save the timings when prompted." },
 ];
 
-function buildPracticalTasks(wordTaskCount, excelTaskCount, pptTaskCount) {
-  const wordTasks  = shuffleArray(WORD_TASK_BANK).slice(0, wordTaskCount).sort((a,b)=>a.id.localeCompare(b.id));
-  const excelTasks = shuffleArray(EXCEL_TASK_BANK).slice(0, excelTaskCount).sort((a,b)=>a.id.localeCompare(b.id));
-  const pptTasks   = shuffleArray(PPT_TASK_BANK).slice(0, pptTaskCount||8).sort((a,b)=>a.id.localeCompare(b.id));
+// ═══════════════════════════════════════════════════════
+//  WORD DOCUMENT TOPICS (6 rotating topics)
+// ═══════════════════════════════════════════════════════
+const WORD_TOPICS = [
+  {
+    title: "The Internet & World Wide Web",
+    subtitle: "A Comprehensive Guide",
+    instructions: "Write a detailed document covering: <strong>History of the Internet</strong>, <strong>How the WWW Works</strong> (DNS, HTTP, URLs), <strong>Types of Networks</strong> (LAN, WAN, MAN), <strong>Web Browsers & Search Engines</strong>, and <strong>Internet Safety & Cybersecurity Tips</strong>. Write at least 2 paragraphs per topic.",
+    saveAs: "Word_Internet_[YourName].docx"
+  },
+  {
+    title: "Artificial Intelligence — Past, Present & Future",
+    subtitle: "An Overview for Students",
+    instructions: "Cover at least 5 topics: <strong>What is AI?</strong>, <strong>History of AI</strong>, <strong>Machine Learning vs Deep Learning</strong>, <strong>AI Applications</strong> (healthcare, education, self-driving cars), and <strong>Risks & Ethics of AI</strong>. Write at least 2 paragraphs per topic.",
+    saveAs: "Word_AI_[YourName].docx"
+  },
+  {
+    title: "Cybersecurity — Staying Safe Online",
+    subtitle: "A Student's Digital Safety Guide",
+    instructions: "Write about: <strong>Types of Cyber Threats</strong> (phishing, malware, ransomware), <strong>How Hackers Work</strong>, <strong>Password Best Practices</strong>, <strong>Two-Factor Authentication</strong>, and <strong>Safe Browsing Habits</strong>. Write at least 2 paragraphs per topic.",
+    saveAs: "Word_Cybersecurity_[YourName].docx"
+  },
+  {
+    title: "Cloud Computing — The Future of Storage",
+    subtitle: "Understanding the Cloud",
+    instructions: "Cover: <strong>What is Cloud Computing?</strong>, <strong>Public vs Private vs Hybrid Cloud</strong>, <strong>Cloud Service Models</strong> (IaaS, PaaS, SaaS), <strong>Popular Cloud Providers</strong> (Google, AWS, Azure), and <strong>Advantages & Disadvantages</strong>. Write at least 2 paragraphs per topic.",
+    saveAs: "Word_Cloud_[YourName].docx"
+  },
+  {
+    title: "Programming Languages — A Beginner's Guide",
+    subtitle: "From Binary to Python",
+    instructions: "Explain: <strong>What is Programming?</strong>, <strong>Low-Level vs High-Level Languages</strong>, <strong>Compilers vs Interpreters</strong>, <strong>Overview of Python, Java, C++, JavaScript</strong>, and <strong>Careers in Programming</strong>. Write at least 2 paragraphs per topic.",
+    saveAs: "Word_Programming_[YourName].docx"
+  },
+  {
+    title: "Input & Output Devices — A Complete Guide",
+    subtitle: "Hardware We Use Every Day",
+    instructions: "Write about: <strong>What are Input Devices?</strong> (keyboard, mouse, scanner, microphone), <strong>What are Output Devices?</strong> (monitor, printer, speaker, projector), <strong>Dual-Purpose Devices</strong> (touchscreen, headset), <strong>How Printers Work</strong>, and <strong>Future I/O Technologies</strong>. Write at least 2 paragraphs per topic.",
+    saveAs: "Word_IO_Devices_[YourName].docx"
+  }
+];
 
-  wordTasks.forEach((t, i)  => t.num = i + 1);
-  excelTasks.forEach((t, i) => t.num = i + 1);
-  pptTasks.forEach((t, i)   => t.num = i + 1);
-  return { wordTasks, excelTasks, pptTasks };
+// ═══════════════════════════════════════════════════════
+//  EXCEL DATASETS (6 rotating datasets)
+// ═══════════════════════════════════════════════════════
+const EXCEL_DATASETS = [
+  {
+    title: "School Monthly Budget Tracker",
+    description: "Enter this monthly school budget data and complete all tasks below.",
+    saveAs: "Excel_Budget_[YourName].xlsx",
+    headers: ["Month","Category","Budgeted (PKR)","Actual (PKR)","Difference","Status"],
+    rows: [
+      ["January","Stationery","5000","4800","(formula)","(formula)"],
+      ["January","Electricity","12000","13500","(formula)","(formula)"],
+      ["February","Stationery","5000","4200","(formula)","(formula)"],
+      ["February","Internet","3000","3000","(formula)","(formula)"],
+      ["March","Electricity","12000","11000","(formula)","(formula)"],
+      ["March","Maintenance","8000","9500","(formula)","(formula)"],
+      ["April","Stationery","5000","5600","(formula)","(formula)"],
+      ["April","Salaries","80000","80000","(formula)","(formula)"],
+      ["May","Internet","3000","3200","(formula)","(formula)"],
+      ["May","Maintenance","8000","7500","(formula)","(formula)"]
+    ],
+    note: "<strong>Difference</strong> = Budgeted − Actual &nbsp;·&nbsp; <strong>Status</strong>: 'Over Budget' if Actual > Budgeted, else 'On Track'"
+  },
+  {
+    title: "Employee Attendance & Salary Register",
+    description: "Enter this HR data and complete all tasks below.",
+    saveAs: "Excel_HR_[YourName].xlsx",
+    headers: ["Employee Name","Department","Days Present","Daily Rate (PKR)","Gross Salary","Tax (10%)","Net Salary"],
+    rows: [
+      ["Ahmed Raza","IT","25","2000","(formula)","(formula)","(formula)"],
+      ["Sana Malik","HR","22","1800","(formula)","(formula)","(formula)"],
+      ["Bilal Qureshi","Finance","26","2200","(formula)","(formula)","(formula)"],
+      ["Nadia Khan","IT","20","2000","(formula)","(formula)","(formula)"],
+      ["Tariq Hussain","Admin","24","1500","(formula)","(formula)","(formula)"],
+      ["Ayesha Noor","Finance","27","2200","(formula)","(formula)","(formula)"],
+      ["Kamran Ali","HR","18","1800","(formula)","(formula)","(formula)"],
+      ["Fatima Zahra","IT","25","2000","(formula)","(formula)","(formula)"]
+    ],
+    note: "<strong>Gross</strong> = Days × Rate &nbsp;·&nbsp; <strong>Tax</strong> = Gross × 10% &nbsp;·&nbsp; <strong>Net</strong> = Gross − Tax"
+  },
+  {
+    title: "Fruit & Vegetable Sales Register",
+    description: "Enter this shop sales data and complete all tasks below.",
+    saveAs: "Excel_Sales_[YourName].xlsx",
+    headers: ["Item","Category","Qty Sold (kg)","Price/kg (PKR)","Revenue","Discount (5%)","Net Revenue"],
+    rows: [
+      ["Apple","Fruit","120","180","(formula)","(formula)","(formula)"],
+      ["Mango","Fruit","250","120","(formula)","(formula)","(formula)"],
+      ["Potato","Vegetable","400","60","(formula)","(formula)","(formula)"],
+      ["Tomato","Vegetable","180","90","(formula)","(formula)","(formula)"],
+      ["Banana","Fruit","300","40","(formula)","(formula)","(formula)"],
+      ["Onion","Vegetable","220","70","(formula)","(formula)","(formula)"],
+      ["Guava","Fruit","150","100","(formula)","(formula)","(formula)"],
+      ["Carrot","Vegetable","130","80","(formula)","(formula)","(formula)"]
+    ],
+    note: "<strong>Revenue</strong> = Qty × Price &nbsp;·&nbsp; <strong>Discount</strong> = Revenue × 5% &nbsp;·&nbsp; <strong>Net Revenue</strong> = Revenue − Discount"
+  },
+  {
+    title: "Class Examination Results — Science Group",
+    description: "Enter this exam results data and complete all tasks below.",
+    saveAs: "Excel_Results_[YourName].xlsx",
+    headers: ["Student Name","Physics","Chemistry","Biology","Math","Total","Average","Grade"],
+    rows: [
+      ["Zaid Hamza","82","76","88","91","(formula)","(formula)","(formula)"],
+      ["Maira Aslam","90","85","92","78","(formula)","(formula)","(formula)"],
+      ["Hamza Tariq","65","70","60","72","(formula)","(formula)","(formula)"],
+      ["Layla Shah","78","82","79","85","(formula)","(formula)","(formula)"],
+      ["Danyal Ahmed","55","60","58","50","(formula)","(formula)","(formula)"],
+      ["Sadia Riaz","93","88","96","94","(formula)","(formula)","(formula)"],
+      ["Irfan Malik","71","68","74","77","(formula)","(formula)","(formula)"],
+      ["Aiman Baig","84","90","87","83","(formula)","(formula)","(formula)"]
+    ],
+    note: "<strong>Total</strong> = SUM &nbsp;·&nbsp; <strong>Average</strong> = AVERAGE &nbsp;·&nbsp; <strong>Grade</strong>: ≥85→A, ≥70→B, ≥55→C, else→F"
+  },
+  {
+    title: "Library Book Inventory & Fine Tracker",
+    description: "Enter this library data and complete all tasks below.",
+    saveAs: "Excel_Library_[YourName].xlsx",
+    headers: ["Book Title","Author","Borrower","Issue Date","Return Date","Days Overdue","Fine (PKR)"],
+    rows: [
+      ["Python Basics","Mark Lutz","Ali Ahmed","01-Apr","10-Apr","5","(formula)"],
+      ["History of AI","Stuart Russell","Sara Khan","05-Apr","12-Apr","0","(formula)"],
+      ["Excel Mastery","John Walkenbach","Bilal Raza","02-Apr","15-Apr","8","(formula)"],
+      ["Network Guide","Andrew Tanenbaum","Hira Malik","08-Apr","14-Apr","2","(formula)"],
+      ["Data Science 101","Wes McKinney","Usman Tariq","03-Apr","20-Apr","12","(formula)"],
+      ["Cloud Computing","Thomas Erl","Zara Noor","07-Apr","13-Apr","0","(formula)"],
+      ["Cybersecurity","William Stallings","Kamran Baig","04-Apr","18-Apr","7","(formula)"],
+      ["Web Dev Crash","Jon Duckett","Ayesha Siddiqi","06-Apr","16-Apr","3","(formula)"]
+    ],
+    note: "<strong>Fine</strong> = Days Overdue × 10 PKR per day &nbsp;·&nbsp; If Days Overdue = 0, Fine = 0"
+  },
+  {
+    title: "Online Store — Product Inventory Report",
+    description: "Enter this inventory data and complete all tasks below.",
+    saveAs: "Excel_Inventory_[YourName].xlsx",
+    headers: ["Product","Category","Stock (Units)","Cost Price (PKR)","Sale Price (PKR)","Profit/Unit","Total Profit"],
+    rows: [
+      ["Laptop","Electronics","15","85000","110000","(formula)","(formula)"],
+      ["Mouse","Accessories","80","800","1500","(formula)","(formula)"],
+      ["USB Drive 64GB","Storage","150","600","1200","(formula)","(formula)"],
+      ["HDMI Cable","Accessories","60","400","900","(formula)","(formula)"],
+      ["Webcam HD","Electronics","30","5000","9500","(formula)","(formula)"],
+      ["Keyboard","Accessories","45","1200","2500","(formula)","(formula)"],
+      ["SSD 512GB","Storage","25","12000","18000","(formula)","(formula)"],
+      ["Headphones","Electronics","35","3500","6500","(formula)","(formula)"]
+    ],
+    note: "<strong>Profit/Unit</strong> = Sale − Cost &nbsp;·&nbsp; <strong>Total Profit</strong> = Profit/Unit × Stock"
+  }
+];
+
+// ═══════════════════════════════════════════════════════
+//  MARK-BASED TASK SELECTOR (knapsack / greedy approach)
+// ═══════════════════════════════════════════════════════
+/**
+ * Selects tasks from a bank such that their total marks equal targetMarks.
+ * Uses a greedy + backtracking approach.
+ * Falls back to closest possible total if exact match impossible.
+ */
+function selectTasksByMarks(bank, targetMarks) {
+  if (!targetMarks || targetMarks <= 0) return [];
+  const shuffled = shuffleArray([...bank]);
+
+  // Try exact subset sum (greedy first pass)
+  function greedyExact(items, target) {
+    const result = [];
+    let remaining = target;
+    // try descending then ascending to fill gaps
+    const desc = [...items].sort((a,b) => b.marks - a.marks);
+    for (const item of desc) {
+      if (item.marks <= remaining) {
+        result.push(item);
+        remaining -= item.marks;
+        if (remaining === 0) return result;
+      }
+    }
+    // try filling remaining gap with smallest available
+    const asc = [...items].filter(i => !result.includes(i)).sort((a,b) => a.marks - b.marks);
+    for (const item of asc) {
+      if (item.marks <= remaining) {
+        result.push(item);
+        remaining -= item.marks;
+        if (remaining === 0) return result;
+      }
+    }
+    return result; // best effort
+  }
+
+  const selected = greedyExact(shuffled, targetMarks);
+  selected.forEach((t, i) => t.num = i + 1);
+  return selected;
+}
+
+function buildPracticalTasks(wordTargetMarks, excelTargetMarks, pptTargetMarks) {
+  // Support both old (count) and new (marks) modes
+  // If value > 20 it's treated as marks, otherwise as count (backward compat)
+  let wordTasks, excelTasks, pptTasks;
+
+  if (wordTargetMarks > 20) {
+    wordTasks  = selectTasksByMarks(WORD_TASK_BANK,  wordTargetMarks);
+  } else {
+    wordTasks  = shuffleArray(WORD_TASK_BANK).slice(0, wordTargetMarks);
+    wordTasks.forEach((t,i) => t.num = i+1);
+  }
+
+  if (excelTargetMarks > 20) {
+    excelTasks = selectTasksByMarks(EXCEL_TASK_BANK, excelTargetMarks);
+  } else {
+    excelTasks = shuffleArray(EXCEL_TASK_BANK).slice(0, excelTargetMarks);
+    excelTasks.forEach((t,i) => t.num = i+1);
+  }
+
+  if (pptTargetMarks > 15) {
+    pptTasks   = selectTasksByMarks(PPT_TASK_BANK,   pptTargetMarks);
+  } else {
+    pptTasks   = shuffleArray(PPT_TASK_BANK).slice(0, pptTargetMarks||8);
+    pptTasks.forEach((t,i) => t.num = i+1);
+  }
+
+  // Pick random topic & dataset for this session
+  const wordTopic   = WORD_TOPICS[Math.floor(Math.random() * WORD_TOPICS.length)];
+  const excelDataset= EXCEL_DATASETS[Math.floor(Math.random() * EXCEL_DATASETS.length)];
+
+  return { wordTasks, excelTasks, pptTasks, wordTopic, excelDataset };
 }
 
 const DEFAULT_EXAM_CONFIG = {
@@ -1383,7 +1599,9 @@ const DEFAULT_EXAM_CONFIG = {
   timeMinutes:    45
 };
 
-window.PPT_TASK_BANK = PPT_TASK_BANK;
+window.PPT_TASK_BANK   = PPT_TASK_BANK;
+window.WORD_TOPICS     = WORD_TOPICS;
+window.EXCEL_DATASETS  = EXCEL_DATASETS;
 
 (function cacheBanksForTeacher(){
   try{
