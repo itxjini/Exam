@@ -129,3 +129,23 @@ export function listenAllowedStudents(callback) {
 
   return () => supabase.removeChannel(channel);
 }
+
+// ── Admin credentials (stored in DB so changes apply everywhere) ──────
+const ADMIN_TABLE = "admin";
+
+export async function loadAdminCredentials() {
+  const { data, error } = await supabase
+    .from(ADMIN_TABLE)
+    .select("email, password")
+    .eq("id", 1)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data ? { email: data.email, password: data.password } : null;
+}
+
+export async function saveAdminCredentials(email, password) {
+  const { error } = await supabase
+    .from(ADMIN_TABLE)
+    .upsert({ id: 1, email, password }, { onConflict: "id" });
+  if (error) throw new Error(error.message);
+}
