@@ -543,11 +543,9 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:1
 </div>
 
 <script>
-// ── Admin credentials — loaded from Supabase DB ───────────────────────
-var TEACHER_EMAIL = 'Jini@jinimaestro.com';   // fallback until DB loads
+var TEACHER_EMAIL = 'Jini@jinimaestro.com';
 var TEACHER_PASS  = 'Robin..987';
 
-// ── Supabase helpers loaded via dynamic import ────────────────────────
 var _listenSubmissions, _updateSubmission, _clearSubmissions,
     _fbSaveConfig, _listenExamConfig,
     _saveAllowedStudents, _loadAllowedStudents, _listenAllowedStudents,
@@ -568,13 +566,13 @@ import('./supabase.js').then(function(m){
   _loadAdminCredentials = m.loadAdminCredentials;
   _saveAdminCredentials = m.saveAdminCredentials;
   _moduleReady = true;
-  // Load credentials from DB so login uses live values
+  
   _loadAdminCredentials().then(function(creds){
     if(creds && creds.email && creds.password){
       TEACHER_EMAIL = creds.email;
       TEACHER_PASS  = creds.password;
     }
-  }).catch(function(){ /* use fallback */ });
+  }).catch(function(){ });
   if(_pendingRender){ _pendingRender=false; renderAll(); }
 }).catch(function(e){ console.error('Supabase module failed:', e); });
 
@@ -585,9 +583,8 @@ function doLogin(){
   var pass  = document.getElementById('login-pass').value;
   var errEl = document.getElementById('login-error');
   var btn   = document.getElementById('btn-login');
-  // Show loading state
+
   btn.disabled = true; btn.textContent = 'Checking...';
-  // Try DB credentials (already loaded), then check
   var check = function(){
     if(email.toLowerCase()===TEACHER_EMAIL.toLowerCase() && pass===TEACHER_PASS){
       btn.disabled=false; btn.textContent='Sign In';
@@ -601,8 +598,7 @@ function doLogin(){
       setTimeout(function(){errEl.style.display='none';},3500);
     }
   };
-  // If credentials already loaded from DB, check immediately
-  // If module not ready yet, wait briefly then check with fallback
+
   if(_moduleReady){
     _loadAdminCredentials().then(function(creds){
       if(creds && creds.email && creds.password){
@@ -667,7 +663,6 @@ function saveCredentials(){
   }
   var finalEmail = newEmail || TEACHER_EMAIL;
   var finalPass  = newPass  || TEACHER_PASS;
-  // Save to Supabase DB so ALL devices see new credentials immediately
   _saveAdminCredentials(finalEmail, finalPass).then(function(){
     TEACHER_EMAIL = finalEmail;
     TEACHER_PASS  = finalPass;
@@ -699,7 +694,6 @@ function renderAll(){
 }
 </script>
 <script>
-// ── Students tab ─────────────────────────────────────────────────────
 function renderStudents(){
   var students=getStudents(),submissions=getSubmissions();
   var doneNames=submissions.map(function(s){return s.studentName.toLowerCase();});
@@ -754,7 +748,6 @@ function removeStudent(name){
 window.removeStudent=removeStudent;
 </script>
 <script>
-// ── Submissions tab ───────────────────────────────────────────────────
 function renderSubmissions(){
   var subs=getSubmissions();
   var filtered=activeFilter==='all'?subs:activeFilter==='graded'?subs.filter(function(s){return s.graded;}):subs.filter(function(s){return !s.graded;});
@@ -804,12 +797,10 @@ function setFilter(f){
 window.setFilter=setFilter;
 
 function getExamMarks(){
-  // Pull live marks from current examConfig — falls back to defaults
   var cfg = window._examConfig || {};
   var mcqCount = (cfg.hwQuestions||20)+(cfg.wordQuestions||5)+(cfg.excelQuestions||5)+(cfg.softwareQuestions||5);
   var wMax, eMax, pMax;
   if(cfg.useMarksMode === false){
-    // count mode — estimate max from task marks (use stored values)
     wMax = cfg.wordMarks  || 30;
     eMax = cfg.excelMarks || 30;
     pMax = cfg.pptMarks   || 20;
@@ -907,15 +898,12 @@ function clearAllSubmissions(){
 window.clearAllSubmissions=clearAllSubmissions;
 </script>
 <script>
-// ── Exam Config tab ───────────────────────────────────────────────────
-// ── Exam Config tab ───────────────────────────────────────────────────
 var manualSelectedQ  = new Set();
 var manualSelectedWT = new Set();
 var manualSelectedET = new Set();
 var manualSelectedPT = new Set();
 var manualSelectedSW = new Set();
 
-/* ── Mode toggle ─────────────────────────────── */
 function setSelectionMode(mode){
   document.querySelectorAll('.cfg-mode-btn').forEach(function(b){ b.classList.remove('active'); });
   var btn = document.querySelector('.cfg-mode-btn[data-mode="'+mode+'"]');
@@ -927,10 +915,8 @@ function setSelectionMode(mode){
   if(mode==='manual') renderAllManualPanels();
 }
 window.setSelectionMode = setSelectionMode;
-// alias kept for loadConfigUI
 window.setConfigMode = setSelectionMode;
 
-/* ── Load config into UI ─────────────────────── */
 function loadConfigUI(){
   var cfg = window._examConfig || {
     hwQuestions:20, wordQuestions:5, excelQuestions:5, softwareQuestions:5,
@@ -951,12 +937,10 @@ function loadConfigUI(){
   set('cfg-ppt-t',     cfg.pptTasks   || 8);
   set('cfg-time',      cfg.timeMinutes || 45);
   set('cfg-time-manual', cfg.timeMinutes || 45);
-  // restore task mode
   var tMode = cfg.useMarksMode===false ? 'count' : 'marks';
   _taskMode = tMode;
   setTaskMode(tMode);
 
-  // restore manual selections
   manualSelectedQ.clear();  (cfg.manualQuestions  ||[]).forEach(function(x){manualSelectedQ.add(x);});
   manualSelectedWT.clear(); (cfg.manualWordTasks  ||[]).forEach(function(x){manualSelectedWT.add(x);});
   manualSelectedET.clear(); (cfg.manualExcelTasks ||[]).forEach(function(x){manualSelectedET.add(x);});
@@ -968,7 +952,7 @@ function loadConfigUI(){
 }
 window.loadConfigUI = loadConfigUI;
 
-var _taskMode = 'marks'; // 'marks' or 'count'
+var _taskMode = 'marks';
 function setTaskMode(mode){
   _taskMode = mode;
   var marksP = document.getElementById('marks-mode-panel');
@@ -1034,7 +1018,6 @@ function updateConfigPreview(){
 window.updateConfigPreview = updateConfigPreview;
 window.updateTotals = updateConfigPreview;
 
-/* ── Manual counts badge updater ─────────────── */
 function updateManualCounts(){
   var totalQ = manualSelectedQ.size + manualSelectedWT.size + manualSelectedET.size + manualSelectedPT.size + manualSelectedSW.size;
   var setText = function(id,v){ var el=document.getElementById(id); if(el) el.textContent=v; };
@@ -1042,7 +1025,6 @@ function updateManualCounts(){
   setText('manual-wt-count', manualSelectedWT.size + ' Word tasks selected');
   setText('manual-et-count', manualSelectedET.size + ' Excel tasks selected');
   setText('manual-pt-count', manualSelectedPT.size + ' PPT tasks selected');
-  // update tab counts
   setText('mc-hw',       manualSelectedQ.size +'/84');
   setText('mc-software-q', manualSelectedSW.size+'/36');
   setText('mc-word-t',   manualSelectedWT.size+'/42');
@@ -1053,7 +1035,6 @@ function updateManualCounts(){
 }
 window.updateManualCounts = updateManualCounts;
 
-/* ── Manual panel tab switcher ───────────────── */
 function switchManualTab(tab){
   document.querySelectorAll('.mtab').forEach(function(b){ b.classList.remove('active'); });
   document.querySelectorAll('.manual-panel').forEach(function(p){ p.classList.remove('active'); });
@@ -1064,7 +1045,6 @@ function switchManualTab(tab){
 }
 window.switchManualTab = switchManualTab;
 
-/* ── Render all manual panels from cached bank ── */
 function renderAllManualPanels(){
   try{
     var qBank  = JSON.parse(localStorage.getItem('exam_question_bank_cache')||'[]');
@@ -1085,7 +1065,6 @@ function renderAllManualPanels(){
     renderTaskPanel('manual-panel-excel-t', eBank, manualSelectedET, 'et', 'excel');
     renderTaskPanel('manual-panel-ppt-t',   pBank, manualSelectedPT, 'pt', 'ppt');
 
-    // update tab counts from bank sizes
     var setText = function(id,v){ var el=document.getElementById(id); if(el) el.textContent=v; };
     setText('mc-hw',         manualSelectedQ.size+'/'+hw.length);
     setText('mc-word-q',     ''+wordQ.length);
@@ -1101,7 +1080,6 @@ function renderAllManualPanels(){
 function renderQPanel(panelId, questions, selectedSet, prefix, isTask){
   var panel = document.getElementById(panelId);
   if(!panel) return;
-  // group by topic
   var groups = {};
   questions.forEach(function(q){
     var t = q.topic||q.section||'General';
@@ -1129,7 +1107,6 @@ function renderQPanel(panelId, questions, selectedSet, prefix, isTask){
     html += '</div>';
   });
   panel.innerHTML = html;
-  // attach toggle logic via closure
   panel._set = selectedSet;
 }
 
@@ -1175,7 +1152,6 @@ function escapeAttr(s){ return (s||'').replace(/"/g,'&quot;').replace(/'/g,'&#39
 
 function toggleQ(row, qId, panelId){
   var panel = document.getElementById(panelId);
-  // figure out which set this panel uses
   var set;
   if(panelId==='manual-panel-software-q') set=manualSelectedSW;
   else set=manualSelectedQ;
@@ -1230,7 +1206,6 @@ function filterPanel(input, panelId){
 }
 window.filterPanel = filterPanel;
 
-/* ── Save / Reset ────────────────────────────── */
 function saveExamConfig(){
   var modeBtns = document.querySelectorAll('.cfg-mode-btn.active');
   var selMode = modeBtns.length ? (modeBtns[0].getAttribute('data-mode')||'auto') : 'auto';
@@ -1295,7 +1270,6 @@ function gradeClass(t, grandTotal){
 window.gradeClass=gradeClass;
 </script>
 <script>
-// ── PDF Generation (Blob URL — works everywhere, no popup blocker) ───
 function pdfStyles(){
   return '@import url(\'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600&display=swap\');'
   +'@page{size:A4;margin:16mm 15mm;}'
@@ -1364,7 +1338,6 @@ function buildStudentHTML(sub){
   var date=new Date(sub.submitted_at||sub.submittedAt||Date.now());
   var dateStr=date.toLocaleDateString('en-GB')+' at '+date.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
   var gr=sub.graded;
-  // Use marks stored on submission if available; fall back to current examConfig
   var marks = getExamMarks();
   var mcqMax = sub.mcqTotal || marks.mcqMax;
   var wMax   = sub.wordMarksMax  || marks.wMax;
