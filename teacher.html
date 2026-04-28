@@ -493,6 +493,10 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:1
 
       <div class="settings-section">
         <div class="ss-title">🔐 Change Login Credentials</div>
+        <div style="background:rgba(59,139,255,.07);border:1px solid rgba(59,139,255,.18);border-radius:10px;padding:13px 16px;margin-bottom:16px;font-size:12px;color:var(--muted);font-family:var(--mono);line-height:1.7;">
+          ✅ Stored in <strong style="color:var(--cyan)">Supabase Database</strong> — changes apply on ALL devices instantly.<br/>
+          ⚠ One-time setup: Create an <code style="background:rgba(255,255,255,.08);padding:1px 5px;border-radius:4px;">admin</code> table in Supabase with columns <code style="background:rgba(255,255,255,.08);padding:1px 5px;border-radius:4px;">id</code> (int8, primary key), <code style="background:rgba(255,255,255,.08);padding:1px 5px;border-radius:4px;">email</code> (text), <code style="background:rgba(255,255,255,.08);padding:1px 5px;border-radius:4px;">password</code> (text) — then insert one row with id=1.
+        </div>
         <p style="font-size:13px;color:var(--muted);margin-bottom:18px;line-height:1.7;">Update the email and password used to access this Teacher Panel. Changes take effect immediately.</p>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;">
           <div class="cfg-field">
@@ -539,14 +543,15 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:1
 </div>
 
 <script>
-// ── Credentials (saved in localStorage so they persist) ──────────────
-var TEACHER_EMAIL = localStorage.getItem('tp_email') || 'Jini@jinimaestro.com';
-var TEACHER_PASS  = localStorage.getItem('tp_pass')  || 'Robin..987';
+// ── Admin credentials — loaded from Supabase DB ───────────────────────
+var TEACHER_EMAIL = 'Jini@jinimaestro.com';   // fallback until DB loads
+var TEACHER_PASS  = 'Robin..987';
 
 // ── Supabase helpers loaded via dynamic import ────────────────────────
 var _listenSubmissions, _updateSubmission, _clearSubmissions,
     _fbSaveConfig, _listenExamConfig,
-    _saveAllowedStudents, _loadAllowedStudents, _listenAllowedStudents;
+    _saveAllowedStudents, _loadAllowedStudents, _listenAllowedStudents,
+    _loadAdminCredentials, _saveAdminCredentials;
 
 var _moduleReady = false;
 var _pendingRender = false;
@@ -560,23 +565,53 @@ import('./supabase.js').then(function(m){
   _saveAllowedStudents  = m.saveAllowedStudents;
   _loadAllowedStudents  = m.loadAllowedStudents;
   _listenAllowedStudents= m.listenAllowedStudents;
+  _loadAdminCredentials = m.loadAdminCredentials;
+  _saveAdminCredentials = m.saveAdminCredentials;
   _moduleReady = true;
+  // Load credentials from DB so login uses live values
+  _loadAdminCredentials().then(function(creds){
+    if(creds && creds.email && creds.password){
+      TEACHER_EMAIL = creds.email;
+      TEACHER_PASS  = creds.password;
+    }
+  }).catch(function(){ /* use fallback */ });
   if(_pendingRender){ _pendingRender=false; renderAll(); }
 }).catch(function(e){ console.error('Supabase module failed:', e); });
 
 var activeFilter='all';
 
 function doLogin(){
-  var email=document.getElementById('login-email').value.trim();
-  var pass=document.getElementById('login-pass').value;
-  var errEl=document.getElementById('login-error');
-  if(email.toLowerCase()===TEACHER_EMAIL.toLowerCase()&&pass===TEACHER_PASS){
-    document.getElementById('login-screen').style.display='none';
-    document.getElementById('panel').style.display='flex';
-    if(_moduleReady){ renderAll(); } else { _pendingRender=true; }
+  var email = document.getElementById('login-email').value.trim();
+  var pass  = document.getElementById('login-pass').value;
+  var errEl = document.getElementById('login-error');
+  var btn   = document.getElementById('btn-login');
+  // Show loading state
+  btn.disabled = true; btn.textContent = 'Checking...';
+  // Try DB credentials (already loaded), then check
+  var check = function(){
+    if(email.toLowerCase()===TEACHER_EMAIL.toLowerCase() && pass===TEACHER_PASS){
+      btn.disabled=false; btn.textContent='Sign In';
+      document.getElementById('login-screen').style.display='none';
+      document.getElementById('panel').style.display='flex';
+      if(_moduleReady){ renderAll(); } else { _pendingRender=true; }
+    } else {
+      btn.disabled=false; btn.textContent='Sign In';
+      errEl.textContent='❌ Incorrect email or password.';
+      errEl.style.display='block';
+      setTimeout(function(){errEl.style.display='none';},3500);
+    }
+  };
+  // If credentials already loaded from DB, check immediately
+  // If module not ready yet, wait briefly then check with fallback
+  if(_moduleReady){
+    _loadAdminCredentials().then(function(creds){
+      if(creds && creds.email && creds.password){
+        TEACHER_EMAIL=creds.email; TEACHER_PASS=creds.password;
+      }
+      check();
+    }).catch(function(){ check(); });
   } else {
-    errEl.style.display='block';
-    setTimeout(function(){errEl.style.display='none';},3500);
+    setTimeout(check, 800);
   }
 }
 window.doLogin = doLogin;
@@ -630,13 +665,22 @@ function saveCredentials(){
     errEl.textContent='⚠ Password must be at least 6 characters.';
     errEl.style.display='inline'; return;
   }
-  if(newEmail){ TEACHER_EMAIL=newEmail; localStorage.setItem('tp_email',newEmail); }
-  if(newPass){  TEACHER_PASS=newPass;   localStorage.setItem('tp_pass',newPass); }
-  document.getElementById('new-email-input').value='';
-  document.getElementById('new-pass-input').value='';
-  document.getElementById('cred-current-email').textContent=TEACHER_EMAIL;
-  okEl.style.display='inline';
-  setTimeout(function(){okEl.style.display='none';},3500);
+  var finalEmail = newEmail || TEACHER_EMAIL;
+  var finalPass  = newPass  || TEACHER_PASS;
+  // Save to Supabase DB so ALL devices see new credentials immediately
+  _saveAdminCredentials(finalEmail, finalPass).then(function(){
+    TEACHER_EMAIL = finalEmail;
+    TEACHER_PASS  = finalPass;
+    document.getElementById('new-email-input').value='';
+    document.getElementById('new-pass-input').value='';
+    document.getElementById('cred-current-email').textContent=TEACHER_EMAIL;
+    okEl.textContent='✅ Credentials updated in database — applies everywhere immediately!';
+    okEl.style.display='inline';
+    setTimeout(function(){okEl.style.display='none';},5000);
+  }).catch(function(e){
+    errEl.textContent='❌ Save failed: '+e.message+' — Check your Supabase admin table.';
+    errEl.style.display='inline';
+  });
 }
 window.saveCredentials = saveCredentials;
 
@@ -729,7 +773,8 @@ function renderSubmissions(){
     var wordBadge=sub.wordFileUploaded?'<span class="file-badge fb-word">📝 Word</span>':'<span class="file-badge fb-miss">No Word</span>';
     var excelBadge=sub.excelFileUploaded?'<span class="file-badge fb-excel">📊 Excel</span>':'<span class="file-badge fb-miss">No Excel</span>';
     var pptBadge=sub.pptFileUploaded?'<span class="file-badge fb-ppt">📽️ PPT</span>':'<span class="file-badge fb-miss">No PPT</span>';
-    var gradeBadge=sub.graded?'<span class="graded-badge">✓ Graded '+sub.totalGrade+'/100</span>':'<span class="pending-badge">⏳ Pending</span>';
+    var gTotal = getExamMarks().grandTotal;
+    var gradeBadge=sub.graded?'<span class="graded-badge">✓ Graded '+sub.totalGrade+'/'+gTotal+'</span>':'<span class="pending-badge">⏳ Pending</span>';
     card.innerHTML='<div class="sub-card-header" onclick="toggleCard(\''+sub._id+'\')">'
       +'<div class="sch-left"><div class="sch-avatar">'+initials+'</div>'
       +'<div><div class="sch-name">'+sub.studentName+'</div><div class="sch-time">'+timeStr+'</div></div></div>'
@@ -758,7 +803,28 @@ function setFilter(f){
 }
 window.setFilter=setFilter;
 
+function getExamMarks(){
+  // Pull live marks from current examConfig — falls back to defaults
+  var cfg = window._examConfig || {};
+  var mcqCount = (cfg.hwQuestions||20)+(cfg.wordQuestions||5)+(cfg.excelQuestions||5)+(cfg.softwareQuestions||5);
+  var wMax, eMax, pMax;
+  if(cfg.useMarksMode === false){
+    // count mode — estimate max from task marks (use stored values)
+    wMax = cfg.wordMarks  || 30;
+    eMax = cfg.excelMarks || 30;
+    pMax = cfg.pptMarks   || 20;
+  } else {
+    wMax = cfg.wordMarks  || 30;
+    eMax = cfg.excelMarks || 30;
+    pMax = cfg.pptMarks   || 20;
+  }
+  var grandTotal = mcqCount + wMax + eMax + pMax;
+  return { mcqMax: mcqCount, wMax: wMax, eMax: eMax, pMax: pMax, grandTotal: grandTotal };
+}
+window.getExamMarks = getExamMarks;
+
 function buildDetail(sub){
+  var marks = getExamMarks();
   var ansGrid='';
   if(sub.answersDetail){
     sub.answersDetail.forEach(function(a){
@@ -778,51 +844,53 @@ function buildDetail(sub){
   var pptDl=sub.pptFileUploaded&&sub.pptFileData
     ?'<a class="btn-dl ppt-dl" href="'+sub.pptFileData+'" download="'+(sub.pptFileName||'presentation.pptx')+'">📥 Download PowerPoint File</a>'
     :'<div class="btn-dl-miss">No PowerPoint file uploaded</div>';
-  var mcqTotal=sub.mcqTotal||30;
-  var wordVal=sub.graded?(sub.wordGrade||0):'';
-  var excelVal=sub.graded?(sub.excelGrade||0):'';
-  var pptVal=sub.graded?(sub.pptGrade||0):'';
-  var totalVal=sub.graded?(sub.totalGrade||0):'';
+  var mcqTotal = sub.mcqTotal || marks.mcqMax;
+  var wordVal  = sub.graded?(sub.wordGrade||0):'';
+  var excelVal = sub.graded?(sub.excelGrade||0):'';
+  var pptVal   = sub.graded?(sub.pptGrade||0):'';
+  var totalVal = sub.graded?(sub.totalGrade||0):'';
   return '<div class="detail-grid">'
     +'<div class="detail-box"><div class="db-title">MCQ Answers</div><div class="answers-grid">'+ansGrid+'</div></div>'
     +'<div class="detail-box"><div class="db-title">Uploaded Files</div><div class="file-dl-row">'+wordDl+excelDl+pptDl+'</div></div>'
     +'</div>'
     +'<div class="grading-form">'
     +'<div class="gf-header"><span class="gf-title">📝 Grade This Submission</span>'
-    +(sub.graded?'<span class="total-chip">✓ Total: '+sub.totalGrade+'/100</span>':'')
+    +(sub.graded?'<span class="total-chip">✓ Total: '+sub.totalGrade+'/'+marks.grandTotal+'</span>':'')
+    +'<span style="font-size:11px;font-family:var(--mono);color:var(--muted);margin-left:auto;">Marks: MCQ '+mcqTotal+' · Word '+marks.wMax+' · Excel '+marks.eMax+' · PPT '+marks.pMax+' = <strong style="color:var(--cyan)">'+marks.grandTotal+'</strong></span>'
     +'</div>'
     +'<div class="gf-row">'
     +'<div class="gf-field"><label class="gf-label">MCQ (Auto)</label><input class="gf-input" readonly value="'+sub.mcqScore+'/'+mcqTotal+'"/></div>'
-    +'<div class="gf-field"><label class="gf-label">Word /30</label><input class="gf-input" id="wg-'+sub._id+'" type="number" min="0" max="30" placeholder="0–30" value="'+wordVal+'" oninput="calcTotal(\''+sub._id+'\','+sub.mcqScore+')"/></div>'
-    +'<div class="gf-field"><label class="gf-label">Excel /30</label><input class="gf-input" id="eg-'+sub._id+'" type="number" min="0" max="30" placeholder="0–30" value="'+excelVal+'" oninput="calcTotal(\''+sub._id+'\','+sub.mcqScore+')"/></div>'
-    +'<div class="gf-field"><label class="gf-label">PPT /20</label><input class="gf-input" id="pg-'+sub._id+'" type="number" min="0" max="20" placeholder="0–20" value="'+pptVal+'" oninput="calcTotal(\''+sub._id+'\','+sub.mcqScore+')"/></div>'
-    +'<div class="gf-field"><label class="gf-label">Total /100</label><input class="gf-input gf-total" id="tg-'+sub._id+'" readonly value="'+totalVal+'"/></div>'
+    +'<div class="gf-field"><label class="gf-label">Word /'+marks.wMax+'</label><input class="gf-input" id="wg-'+sub._id+'" type="number" min="0" max="'+marks.wMax+'" placeholder="0–'+marks.wMax+'" value="'+wordVal+'" oninput="calcTotal(\''+sub._id+'\','+sub.mcqScore+','+marks.wMax+','+marks.eMax+','+marks.pMax+')"/></div>'
+    +'<div class="gf-field"><label class="gf-label">Excel /'+marks.eMax+'</label><input class="gf-input" id="eg-'+sub._id+'" type="number" min="0" max="'+marks.eMax+'" placeholder="0–'+marks.eMax+'" value="'+excelVal+'" oninput="calcTotal(\''+sub._id+'\','+sub.mcqScore+','+marks.wMax+','+marks.eMax+','+marks.pMax+')"/></div>'
+    +'<div class="gf-field"><label class="gf-label">PPT /'+marks.pMax+'</label><input class="gf-input" id="pg-'+sub._id+'" type="number" min="0" max="'+marks.pMax+'" placeholder="0–'+marks.pMax+'" value="'+pptVal+'" oninput="calcTotal(\''+sub._id+'\','+sub.mcqScore+','+marks.wMax+','+marks.eMax+','+marks.pMax+')"/></div>'
+    +'<div class="gf-field"><label class="gf-label">Total /'+marks.grandTotal+'</label><input class="gf-input gf-total" id="tg-'+sub._id+'" readonly value="'+totalVal+'"/></div>'
     +'</div>'
     +'<textarea class="gf-note" id="tn-'+sub._id+'" placeholder="Optional teacher note...">'+(sub.teacherNote||'')+'</textarea>'
     +'<div class="gf-actions">'
-    +'<button class="btn-save-grade" onclick="saveGrade(\''+sub._id+'\','+sub.mcqScore+')">💾 Save Grade</button>'
+    +'<button class="btn-save-grade" onclick="saveGrade(\''+sub._id+'\','+sub.mcqScore+','+marks.wMax+','+marks.eMax+','+marks.pMax+','+marks.grandTotal+')">💾 Save Grade</button>'
     +'<button class="btn-pdf-single" onclick="downloadSingleResultPDF(\''+sub._id+'\')">📄 Download PDF</button>'
     +'<span class="grade-saved-msg" id="gsm-'+sub._id+'">✅ Saved!</span>'
     +'</div></div>';
 }
 
-function calcTotal(id, mcq){
-  var w=parseInt(document.getElementById('wg-'+id).value)||0;
-  var e=parseInt(document.getElementById('eg-'+id).value)||0;
-  var p=parseInt(document.getElementById('pg-'+id).value)||0;
+function calcTotal(id, mcq, wMax, eMax, pMax){
+  var w=Math.min(parseInt(document.getElementById('wg-'+id).value)||0, wMax||30);
+  var e=Math.min(parseInt(document.getElementById('eg-'+id).value)||0, eMax||30);
+  var p=Math.min(parseInt(document.getElementById('pg-'+id).value)||0, pMax||20);
   document.getElementById('tg-'+id).value=mcq+w+e+p;
 }
 window.calcTotal=calcTotal;
 
-function saveGrade(id, mcq){
+function saveGrade(id, mcq, wMax, eMax, pMax, grandTotal){
+  wMax=wMax||30; eMax=eMax||30; pMax=pMax||20; grandTotal=grandTotal||100;
   var w=parseInt(document.getElementById('wg-'+id).value);
   var e=parseInt(document.getElementById('eg-'+id).value);
   var p=parseInt(document.getElementById('pg-'+id).value);
   var note=document.getElementById('tn-'+id).value;
   if(isNaN(w)||isNaN(e)||isNaN(p)){alert('Enter marks for Word, Excel and PowerPoint.');return;}
-  if(w<0||w>30){alert('Word marks must be between 0 and 30.');return;}
-  if(e<0||e>30){alert('Excel marks must be between 0 and 30.');return;}
-  if(p<0||p>20){alert('PowerPoint marks must be between 0 and 20.');return;}
+  if(w<0||w>wMax){alert('Word marks must be between 0 and '+wMax+'.');return;}
+  if(e<0||e>eMax){alert('Excel marks must be between 0 and '+eMax+'.');return;}
+  if(p<0||p>pMax){alert('PowerPoint marks must be between 0 and '+pMax+'.');return;}
   var total=mcq+w+e+p;
   _updateSubmission(id,{graded:true,wordGrade:w,excelGrade:e,pptGrade:String(p),totalGrade:total,teacherNote:note})
     .then(function(){
@@ -1217,9 +1285,12 @@ function letterGrade(t){
 }
 window.letterGrade=letterGrade;
 
-function gradeClass(t){
-  if(t==null)return 'gU';if(t>=75)return 'gA';if(t>=55)return 'gB';
-  if(t>=40)return 'gC';return 'gF';
+function gradeClass(t, grandTotal){
+  grandTotal = grandTotal || 100;
+  if(t==null)return 'gU';
+  var pct = t/grandTotal*100;
+  if(pct>=85)return 'gA'; if(pct>=65)return 'gB';
+  if(pct>=50)return 'gC'; return 'gF';
 }
 window.gradeClass=gradeClass;
 </script>
@@ -1293,8 +1364,19 @@ function buildStudentHTML(sub){
   var date=new Date(sub.submitted_at||sub.submittedAt||Date.now());
   var dateStr=date.toLocaleDateString('en-GB')+' at '+date.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
   var gr=sub.graded;
-  var wG=gr?sub.wordGrade:'—';var eG=gr?sub.excelGrade:'—';var pG=gr?(sub.pptGrade||0):'—';var tG=gr?sub.totalGrade:'—';
-  var lg=gr?letterGrade(sub.totalGrade):'N/A';var gc=gr?gradeClass(sub.totalGrade):'gU';
+  // Use marks stored on submission if available; fall back to current examConfig
+  var marks = getExamMarks();
+  var mcqMax = sub.mcqTotal || marks.mcqMax;
+  var wMax   = sub.wordMarksMax  || marks.wMax;
+  var eMax   = sub.excelMarksMax || marks.eMax;
+  var pMax   = sub.pptMarksMax   || marks.pMax;
+  var gTotal = mcqMax + wMax + eMax + pMax;
+  var wG=gr?sub.wordGrade:'—';
+  var eG=gr?sub.excelGrade:'—';
+  var pG=gr?(sub.pptGrade||0):'—';
+  var tG=gr?sub.totalGrade:'—';
+  var lg=gr?letterGrade(sub.totalGrade):'N/A';
+  var gc=gr?gradeClass(sub.totalGrade,gTotal):'gU';
   var mcqRows='';
   if(sub.answersDetail){
     sub.answersDetail.forEach(function(a){
@@ -1307,45 +1389,54 @@ function buildStudentHTML(sub){
       mcqRows+='<tr class="'+cls+'"><td class="aMono" style="color:#64748b;">'+a.num+'</td><td style="font-size:11px;color:#64748b;">'+a.section+'</td><td>'+a.question+'</td><td class="aMono '+gCls+'">'+gv+'</td><td class="aMono aOk">'+cv+'</td><td>'+tag+'</td></tr>';
     });
   }
-  var html='<div class="cov"><div class="cov-top"><div class="cov-logo">JM</div><div><div class="cov-title">IT Mock Examination — Result Report</div><div class="cov-sub">JiniMaestro · Classes 1–20 · Hardware · MS Word · MS Excel · MS PowerPoint · Software</div></div></div>'
+  var html='<div class="cov"><div class="cov-top"><div class="cov-logo">JM</div><div>'
+    +'<div class="cov-title">IT Mock Examination — Result Report</div>'
+    +'<div class="cov-sub">JiniMaestro · Classes 1–20 · Hardware · MS Word · MS Excel · MS PowerPoint · Software</div>'
+    +'</div></div>'
     +'<div class="cov-grid">'
     +'<div class="cov-item"><div class="cov-lbl">Student</div><div class="cov-val">'+sub.studentName+'</div></div>'
     +'<div class="cov-item"><div class="cov-lbl">Submitted</div><div class="cov-val" style="font-size:12px;">'+dateStr+'</div></div>'
-    +'<div class="cov-item"><div class="cov-lbl">MCQ Score</div><div class="cov-val g">'+sub.mcqScore+'/'+(sub.mcqTotal||30)+'</div></div>'
-    +'<div class="cov-item"><div class="cov-lbl">Final Total</div><div class="cov-val c">'+(gr?tG+'/100':'Pending')+'</div></div>'
+    +'<div class="cov-item"><div class="cov-lbl">MCQ Score</div><div class="cov-val g">'+sub.mcqScore+'/'+mcqMax+'</div></div>'
+    +'<div class="cov-item"><div class="cov-lbl">Final Total</div><div class="cov-val c">'+(gr?tG+'/'+gTotal:'Pending')+'</div></div>'
     +'</div></div>'
+    // Score overview
     +'<div class="sec"><div class="sec-title">Score Overview '+(gr?'<span class="gchip '+gc+'">'+lg+'</span>':'<span style="font-size:12px;color:#94a3b8;">Grading pending</span>')+'</div>'
     +'<div class="sc-row">'
-    +'<div class="sc-box sc-m"><div class="sc-lbl">MCQs</div><div class="sc-val">'+sub.mcqScore+'</div><div class="sc-max">/ '+(sub.mcqTotal||30)+'</div></div>'
-    +'<div class="sc-box sc-w"><div class="sc-lbl">Word</div><div class="sc-val">'+(gr?wG:'—')+'</div><div class="sc-max">/ 30</div></div>'
-    +'<div class="sc-box sc-e"><div class="sc-lbl">Excel</div><div class="sc-val">'+(gr?eG:'—')+'</div><div class="sc-max">/ 30</div></div>'
-    +'<div class="sc-box sc-p"><div class="sc-lbl">PPT</div><div class="sc-val">'+(gr?pG:'—')+'</div><div class="sc-max">/ 20</div></div>'
-    +'<div class="sc-box sc-t"><div class="sc-lbl">Total</div><div class="sc-val">'+(gr?tG:'—')+'</div><div class="sc-max">/ 100</div></div>'
+    +'<div class="sc-box sc-m"><div class="sc-lbl">MCQs</div><div class="sc-val">'+sub.mcqScore+'</div><div class="sc-max">/ '+mcqMax+'</div></div>'
+    +'<div class="sc-box sc-w"><div class="sc-lbl">Word</div><div class="sc-val">'+(gr?wG:'—')+'</div><div class="sc-max">/ '+wMax+'</div></div>'
+    +'<div class="sc-box sc-e"><div class="sc-lbl">Excel</div><div class="sc-val">'+(gr?eG:'—')+'</div><div class="sc-max">/ '+eMax+'</div></div>'
+    +'<div class="sc-box sc-p"><div class="sc-lbl">PPT</div><div class="sc-val">'+(gr?pG:'—')+'</div><div class="sc-max">/ '+pMax+'</div></div>'
+    +'<div class="sc-box sc-t"><div class="sc-lbl">Total</div><div class="sc-val">'+(gr?tG:'—')+'</div><div class="sc-max">/ '+gTotal+'</div></div>'
     +'</div>'
     +(sub.teacherNote?'<div class="note"><div class="note-lbl">Teacher Note</div>'+sub.teacherNote+'</div>':'')
     +'</div>'
-    +'<div class="sec"><div class="sec-title">Section A — MCQ Answers <span class="stag stag-m">'+sub.mcqScore+'/'+(sub.mcqTotal||30)+' correct</span></div>'
+    // Section A
+    +'<div class="sec"><div class="sec-title">Section A — MCQ Answers <span class="stag stag-m">'+sub.mcqScore+'/'+mcqMax+' correct</span></div>'
     +'<table><thead><tr><th>#</th><th>Topic</th><th>Question</th><th>Your Answer</th><th>Correct</th><th>Result</th></tr></thead>'
     +'<tbody>'+mcqRows+'</tbody></table></div>'
-    +'<div class="sec"><div class="sec-title">Section B — MS Word Practical <span class="stag stag-w">'+(gr?wG+'/30':'Pending')+'</span></div>'
+    // Section B
+    +'<div class="sec"><div class="sec-title">Section B — MS Word Practical <span class="stag stag-w">'+(gr?wG+'/'+wMax:'Pending')+'</span></div>'
     +'<p style="font-size:12px;color:#64748b;margin-bottom:11px;">'+(sub.wordFileUploaded?'&#x2705; File: <strong>'+sub.wordFileName+'</strong>':'&#x26A0; No Word file uploaded.')+'</p>'
-    +'<div class="sig"><div class="si"><div class="si-line"></div><div class="si-lbl">MARKS OBTAINED / 30</div></div><div class="si"><div class="si-line"></div><div class="si-lbl">EXAMINER INITIALS</div></div></div>'
+    +'<div class="sig"><div class="si"><div class="si-line"></div><div class="si-lbl">MARKS OBTAINED / '+wMax+'</div></div><div class="si"><div class="si-line"></div><div class="si-lbl">EXAMINER INITIALS</div></div></div>'
     +'</div>'
-    +'<div class="sec"><div class="sec-title">Section C — MS Excel Practical <span class="stag stag-e">'+(gr?eG+'/30':'Pending')+'</span></div>'
+    // Section C
+    +'<div class="sec"><div class="sec-title">Section C — MS Excel Practical <span class="stag stag-e">'+(gr?eG+'/'+eMax:'Pending')+'</span></div>'
     +'<p style="font-size:12px;color:#64748b;margin-bottom:11px;">'+(sub.excelFileUploaded?'&#x2705; File: <strong>'+sub.excelFileName+'</strong>':'&#x26A0; No Excel file uploaded.')+'</p>'
-    +'<div class="sig"><div class="si"><div class="si-line"></div><div class="si-lbl">MARKS OBTAINED / 30</div></div><div class="si"><div class="si-line"></div><div class="si-lbl">EXAMINER INITIALS</div></div></div>'
+    +'<div class="sig"><div class="si"><div class="si-line"></div><div class="si-lbl">MARKS OBTAINED / '+eMax+'</div></div><div class="si"><div class="si-line"></div><div class="si-lbl">EXAMINER INITIALS</div></div></div>'
     +'</div>'
-    +'<div class="sec"><div class="sec-title">Section D — MS PowerPoint Practical <span class="stag stag-p">'+(gr?pG+'/20':'Pending')+'</span></div>'
+    // Section D
+    +'<div class="sec"><div class="sec-title">Section D — MS PowerPoint Practical <span class="stag stag-p">'+(gr?pG+'/'+pMax:'Pending')+'</span></div>'
     +'<p style="font-size:12px;color:#64748b;margin-bottom:11px;">'+(sub.pptFileUploaded?'&#x2705; File: <strong>'+sub.pptFileName+'</strong>':'&#x26A0; No PowerPoint file uploaded.')+'</p>'
-    +'<div class="sig"><div class="si"><div class="si-line"></div><div class="si-lbl">MARKS OBTAINED / 20</div></div><div class="si"><div class="si-line"></div><div class="si-lbl">EXAMINER INITIALS</div></div></div>'
+    +'<div class="sig"><div class="si"><div class="si-line"></div><div class="si-lbl">MARKS OBTAINED / '+pMax+'</div></div><div class="si"><div class="si-line"></div><div class="si-lbl">EXAMINER INITIALS</div></div></div>'
     +'</div>'
-    +'<div class="sec"><div class="sec-title">Grand Total <span class="stag stag-t">/100</span></div>'
-    +'<table><thead><tr><th>Section</th><th>Max</th><th>Obtained</th></tr></thead><tbody>'
-    +'<tr class="rOk"><td>Section A — MCQs (Auto-Graded)</td><td>'+(sub.mcqTotal||30)+'</td><td style="font-weight:800;color:#15803d;">'+sub.mcqScore+'</td></tr>'
-    +'<tr><td>Section B — MS Word Practical</td><td>30</td><td style="font-weight:700;">'+(gr?wG:'____')+'</td></tr>'
-    +'<tr><td>Section C — MS Excel Practical</td><td>30</td><td style="font-weight:700;">'+(gr?eG:'____')+'</td></tr>'
-    +'<tr><td>Section D — MS PowerPoint Practical</td><td>20</td><td style="font-weight:700;">'+(gr?pG:'____')+'</td></tr>'
-    +'<tr class="rTot"><td><strong>GRAND TOTAL</strong></td><td><strong>100</strong></td><td style="font-size:18px;font-weight:900;color:#5b21b6;">'+(gr?tG:'____')+'</td></tr>'
+    // Grand total
+    +'<div class="sec"><div class="sec-title">Grand Total <span class="stag stag-t">/ '+gTotal+'</span></div>'
+    +'<table><thead><tr><th>Section</th><th>Max Marks</th><th>Obtained</th></tr></thead><tbody>'
+    +'<tr class="rOk"><td>Section A — MCQs (Auto-Graded)</td><td>'+mcqMax+'</td><td style="font-weight:800;color:#15803d;">'+sub.mcqScore+'</td></tr>'
+    +'<tr><td>Section B — MS Word Practical</td><td>'+wMax+'</td><td style="font-weight:700;">'+(gr?wG:'____')+'</td></tr>'
+    +'<tr><td>Section C — MS Excel Practical</td><td>'+eMax+'</td><td style="font-weight:700;">'+(gr?eG:'____')+'</td></tr>'
+    +'<tr><td>Section D — MS PowerPoint Practical</td><td>'+pMax+'</td><td style="font-weight:700;">'+(gr?pG:'____')+'</td></tr>'
+    +'<tr class="rTot"><td><strong>GRAND TOTAL</strong></td><td><strong>'+gTotal+'</strong></td><td style="font-size:18px;font-weight:900;color:#5b21b6;">'+(gr?tG:'____')+'</td></tr>'
     +'</tbody></table>'
     +(gr?'<div style="margin-top:14px;text-align:center;"><span class="gchip '+gc+'" style="font-size:16px;padding:8px 24px;">Grade: '+lg+'</span></div>':'')
     +'<div class="sig" style="margin-top:20px;"><div class="si"><div class="si-line"></div><div class="si-lbl">EXAMINER SIGNATURE</div></div><div class="si"><div class="si-line"></div><div class="si-lbl">DATE MARKED</div></div><div class="si"><div class="si-line"></div><div class="si-lbl">SCHOOL STAMP</div></div></div>'
@@ -1378,6 +1469,7 @@ window.downloadSingleResultPDF=downloadSingleResultPDF;
 function downloadAllResultsPDF(){
   var subs=getSubmissions();
   if(!subs.length){alert('No submissions to export.');return;}
+  var marks = getExamMarks();
   var sorted=[].concat(subs).sort(function(a,b){return (b.totalGrade||0)-(a.totalGrade||0);});
   var now=new Date();
   var gradedSubs=subs.filter(function(s){return s.graded;});
@@ -1386,15 +1478,16 @@ function downloadAllResultsPDF(){
   var summaryRows='';
   sorted.forEach(function(sub,i){
     var tG=sub.graded?sub.totalGrade:'—';
-    var pct=sub.graded?(sub.totalGrade/100*100):0;
-    var barColor=sub.graded?(sub.totalGrade>=75?'#22c55e':sub.totalGrade>=55?'#3b8bff':sub.totalGrade>=40?'#f59e0b':'#ef4444'):'#cbd5e1';
+    var gTotal = marks.grandTotal;
+    var pct=sub.graded?(sub.totalGrade/gTotal*100):0;
+    var barColor=sub.graded?(sub.totalGrade>=gTotal*.75?'#22c55e':sub.totalGrade>=gTotal*.55?'#3b8bff':sub.totalGrade>=gTotal*.4?'#f59e0b':'#ef4444'):'#cbd5e1';
     var lg=letterGrade(sub.graded?sub.totalGrade:null);
-    var gc2=gradeClass(sub.graded?sub.totalGrade:null);
+    var gc2=gradeClass(sub.graded?sub.totalGrade:null,gTotal);
     summaryRows+='<tr><td><div class="rank-num">'+(i+1)+'</div></td><td style="font-weight:700;">'+sub.studentName+'</td>'
-      +'<td style="font-weight:700;color:#15803d;">'+sub.mcqScore+'/'+(sub.mcqTotal||30)+'</td>'
-      +'<td style="font-weight:700;color:#1d4ed8;">'+(sub.graded?sub.wordGrade+'/30':'—')+'</td>'
-      +'<td style="font-weight:700;color:#c2410c;">'+(sub.graded?sub.excelGrade+'/30':'—')+'</td>'
-      +'<td style="font-weight:700;color:#92400e;">'+(sub.graded?(sub.pptGrade||0)+'/20':'—')+'</td>'
+      +'<td style="font-weight:700;color:#15803d;">'+sub.mcqScore+'/'+(sub.mcqTotal||marks.mcqMax)+'</td>'
+      +'<td style="font-weight:700;color:#1d4ed8;">'+(sub.graded?sub.wordGrade+'/'+marks.wMax:'—')+'</td>'
+      +'<td style="font-weight:700;color:#c2410c;">'+(sub.graded?sub.excelGrade+'/'+marks.eMax:'—')+'</td>'
+      +'<td style="font-weight:700;color:#92400e;">'+(sub.graded?(sub.pptGrade||0)+'/'+marks.pMax:'—')+'</td>'
       +'<td style="font-weight:900;font-size:16px;color:#5b21b6;">'+tG+'</td>'
       +'<td><div class="bar-wrap"><div class="bar-fill" style="width:'+pct+'%;background:'+barColor+';"></div></div></td>'
       +'<td><span class="gchip '+gc2+'">'+lg+'</span></td>'
@@ -1412,7 +1505,7 @@ function downloadAllResultsPDF(){
     +'<div class="acs"><div class="acs-val">'+avgTotal+'</div><div class="acs-lbl">Avg Total</div></div>'
     +'</div></div>'
     +'<div class="sec pb"><div class="sec-title">Class Leaderboard &amp; Summary</div>'
-    +'<table><thead><tr><th>#</th><th>Student</th><th>MCQ</th><th>Word /30</th><th>Excel /30</th><th>PPT /20</th><th>Total /100</th><th style="min-width:90px;">Progress</th><th>Grade</th><th>Status</th></tr></thead>'
+    +'<table><thead><tr><th>#</th><th>Student</th><th>MCQ /'+marks.mcqMax+'</th><th>Word /'+marks.wMax+'</th><th>Excel /'+marks.eMax+'</th><th>PPT /'+marks.pMax+'</th><th>Total /'+marks.grandTotal+'</th><th style="min-width:90px;">Progress</th><th>Grade</th><th>Status</th></tr></thead>'
     +'<tbody>'+summaryRows+'</tbody></table></div>'
     +pages;
   openPDFWindow(allHTML,'All_Results_IT_Mock_Exam');
