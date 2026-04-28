@@ -582,7 +582,7 @@ function doLogin(){
   var email = document.getElementById('login-email').value.trim();
   var pass  = document.getElementById('login-pass').value;
   var errEl = document.getElementById('login-error');
-  var btn   = document.getElementById('btn-login');
+  var btn   = document.querySelector('.btn-login');
 
   btn.disabled = true; btn.textContent = 'Checking...';
   var check = function(){
