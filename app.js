@@ -380,6 +380,11 @@ async function submitExam(){
     wordFileUploaded, wordFileName, wordFileData,
     excelFileUploaded, excelFileName, excelFileData,
     pptFileUploaded, pptFileName, pptFileData,
+    // Snapshot current marks allocation so grading is always accurate
+    wordMarksMax: c.wordMarks || 30,
+    excelMarksMax: c.excelMarks || 30,
+    pptMarksMax: c.pptMarks || 20,
+    grandTotal: QUESTIONS.length + (c.wordMarks||30) + (c.excelMarks||30) + (c.pptMarks||20),
     answersDetail:QUESTIONS.map((q,i)=>({
       num:i+1, section:q.section, topic:q.topic||'',
       question:q.q, options:q.opts,
