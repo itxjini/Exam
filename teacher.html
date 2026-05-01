@@ -621,21 +621,21 @@ import('./supabase.js').then(function(m){
 var activeFilter='all';
 
 function doLogin(){
-  var email = document.getElementById('login-email').value.trim();
-  var pass  = document.getElementById('login-pass').value;
-  var errEl = document.getElementById('login-error');
-  var btn   = document.getElementById('btn-login');
+  var email = document.querySelector('.lf-input[type="email"]').value.trim();
+  var pass  = document.querySelector('.lf-input[type="password"]').value;
+  var errEl = document.querySelector('.login-error');
+  var btn   = document.querySelector('.btn-login');
   // Show loading state
   btn.disabled = true; btn.textContent = 'Checking...';
   // Try DB credentials (already loaded), then check
   var check = function(){
     if(email.toLowerCase()===TEACHER_EMAIL.toLowerCase() && pass===TEACHER_PASS){
-      btn.disabled=false; btn.textContent='Sign In';
-      document.getElementById('login-screen').style.display='none';
-      document.getElementById('panel').style.display='flex';
+      btn.disabled=false; btn.textContent='Sign In →';
+      document.querySelector('#login-screen').style.display='none';
+      document.querySelector('#panel').style.display='flex';
       if(_moduleReady){ renderAll(); } else { _pendingRender=true; }
     } else {
-      btn.disabled=false; btn.textContent='Sign In';
+      btn.disabled=false; btn.textContent='Sign In →';
       errEl.textContent='❌ Incorrect email or password.';
       errEl.style.display='block';
       setTimeout(function(){errEl.style.display='none';},3500);
@@ -656,14 +656,14 @@ function doLogin(){
 }
 window.doLogin = doLogin;
 
-document.getElementById('login-pass').addEventListener('keydown',function(e){if(e.key==='Enter')doLogin();});
-document.getElementById('login-email').addEventListener('keydown',function(e){if(e.key==='Enter')doLogin();});
+document.querySelector('.lf-input[type="password"]').addEventListener('keydown',function(e){if(e.key==='Enter')doLogin();});
+document.querySelector('.lf-input[type="email"]').addEventListener('keydown',function(e){if(e.key==='Enter')doLogin();});
 
 function doLogout(){
-  document.getElementById('panel').style.display='none';
-  document.getElementById('login-screen').style.display='flex';
-  document.getElementById('login-email').value='';
-  document.getElementById('login-pass').value='';
+  document.querySelector('#panel').style.display='none';
+  document.querySelector('#login-screen').style.display='flex';
+  document.querySelector('.lf-input[type="email"]').value='';
+  document.querySelector('.lf-input[type="password"]').value='';
 }
 window.doLogout = doLogout;
 
