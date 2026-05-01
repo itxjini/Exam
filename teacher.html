@@ -7,7 +7,53 @@
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet"/>
   <style>
-:root{--bg:#080c14;--surface:#0e1623;--glass:rgba(255,255,255,.04);--gb:rgba(255,255,255,.09);--blue:#3b8bff;--blue-glow:#3b8bff44;--cyan:#00d4ff;--green:#22c55e;--orange:#f97316;--red:#ef4444;--gold:#f59e0b;--purple:#a78bfa;--text:#e8edf5;--muted:#7a8aa0;--r:14px;--font:"Syne",sans-serif;--mono:"DM Mono",monospace;}
+:root{--bg:#080c14;--surface:#0e1623;--glass:rgba(255,255,255,.04);--gb:rgba(255,255,255,.09);--blue:#3b8bff;--blue-glow:#3b8bff44;--cyan:#00d4ff;--green:#22c55e;--orange:#f97316;--red:#ef4444;--gold:#f59e0b;--purple:#a78bfa;--text:#e8edf5;--muted:#7a8aa0;--r:14px;--font:"Syne",sans-serif;--mono:"DM Mono",monospace;--accent:var(--blue);--header-bg:rgba(8,12,20,.92);}
+
+/* ═══════ THEME: Midnight Blue (default) ═══════ */
+[data-theme="midnight"]{
+  --bg:#080c14;--surface:#0e1623;--glass:rgba(255,255,255,.04);--gb:rgba(255,255,255,.09);
+  --blue:#3b8bff;--blue-glow:#3b8bff44;--cyan:#00d4ff;--accent:#3b8bff;
+  --text:#e8edf5;--muted:#7a8aa0;--header-bg:rgba(8,12,20,.92);
+  --grad1:#3b8bff;--grad2:#a78bfa;
+}
+/* ═══════ THEME: Emerald Dark ═══════ */
+[data-theme="emerald"]{
+  --bg:#061210;--surface:#0b1e1a;--glass:rgba(255,255,255,.04);--gb:rgba(34,197,94,.12);
+  --blue:#10b981;--blue-glow:#10b98144;--cyan:#34d399;--accent:#10b981;
+  --text:#e2faf3;--muted:#6b9e8a;--header-bg:rgba(6,18,16,.92);
+  --grad1:#10b981;--grad2:#06b6d4;
+  --purple:#34d399;--gold:#fbbf24;--orange:#f97316;--red:#f87171;--green:#10b981;
+}
+/* ═══════ THEME: Crimson Night ═══════ */
+[data-theme="crimson"]{
+  --bg:#0f0608;--surface:#1a0b0d;--glass:rgba(255,255,255,.04);--gb:rgba(239,68,68,.12);
+  --blue:#f43f5e;--blue-glow:#f43f5e44;--cyan:#fb7185;--accent:#f43f5e;
+  --text:#fdf2f4;--muted:#9e6e74;--header-bg:rgba(15,6,8,.92);
+  --grad1:#f43f5e;--grad2:#f97316;
+  --purple:#fb7185;--gold:#fbbf24;--orange:#f97316;--red:#f43f5e;--green:#34d399;
+}
+/* ═══════ THEME: Solar Gold ═══════ */
+[data-theme="solar"]{
+  --bg:#0d0a02;--surface:#1a1505;--glass:rgba(255,255,255,.04);--gb:rgba(245,158,11,.12);
+  --blue:#f59e0b;--blue-glow:#f59e0b44;--cyan:#fbbf24;--accent:#f59e0b;
+  --text:#fefce8;--muted:#a08c4a;--header-bg:rgba(13,10,2,.92);
+  --grad1:#f59e0b;--grad2:#ef4444;
+  --purple:#fbbf24;--gold:#f59e0b;--orange:#ef4444;--red:#ef4444;--green:#22c55e;
+}
+
+/* Theme-aware gradients */
+.login-logo,.tph-logo,.sch-avatar,.cfg-mode-btn.active{background:linear-gradient(135deg,var(--grad1,var(--blue)),var(--grad2,var(--purple))) !important;}
+.btn-add,.btn-login,.btn-save-config,.btn-save-grade{background:linear-gradient(135deg,var(--grad1,var(--blue)),var(--grad2,var(--purple))) !important;}
+.btn-login:hover,.btn-add:hover{opacity:.88;}
+.tab-btn.active{border-color:var(--accent) !important;background:rgba(var(--accent),.1) !important;}
+.filter-btn.active{border-color:var(--accent) !important;background:rgba(59,139,255,.1) !important;}
+.tp-header{background:var(--header-bg) !important;}
+.tph-sub{color:var(--cyan) !important;}
+.stat-val,.sch-mcq{color:var(--accent) !important;}
+.add-input:focus,.lf-input:focus,.gf-input:focus,.cfg-input:focus,.manual-search:focus{border-color:var(--accent) !important;box-shadow:0 0 0 3px var(--blue-glow) !important;}
+.cfg-mode-btn.active{box-shadow:0 0 0 1px var(--accent) !important;}
+.btn-save-config{box-shadow:0 4px 18px var(--blue-glow) !important;}
+
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh;}
 ::-webkit-scrollbar{width:6px;}::-webkit-scrollbar-track{background:transparent;}::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:3px;}
@@ -147,6 +193,27 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:1
 .cr-val{font-size:14px;font-weight:700;}
 .danger-btn{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);border-radius:9px;padding:11px 22px;color:var(--red);font-family:var(--font);font-size:14px;cursor:pointer;transition:all .2s;}
 .danger-btn:hover{background:rgba(239,68,68,.22);}
+/* ═══════ THEME PICKER ═══════ */
+.theme-picker-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:8px;}
+@media(max-width:700px){.theme-picker-grid{grid-template-columns:1fr 1fr;}}
+.theme-card{border-radius:14px;border:2px solid var(--gb);padding:0;cursor:pointer;transition:all .25s;overflow:hidden;position:relative;}
+.theme-card:hover{transform:translateY(-3px);box-shadow:0 12px 36px rgba(0,0,0,.4);}
+.theme-card.active{border-width:2.5px;border-color:var(--accent);box-shadow:0 0 0 3px var(--blue-glow),0 8px 28px rgba(0,0,0,.5);}
+#tc-midnight.active{border-color:#3b8bff;box-shadow:0 0 0 3px #3b8bff33,0 8px 28px rgba(0,0,0,.5);}
+#tc-emerald.active {border-color:#10b981;box-shadow:0 0 0 3px #10b98133,0 8px 28px rgba(0,0,0,.5);}
+#tc-crimson.active {border-color:#f43f5e;box-shadow:0 0 0 3px #f43f5e33,0 8px 28px rgba(0,0,0,.5);}
+#tc-solar.active   {border-color:#f59e0b;box-shadow:0 0 0 3px #f59e0b33,0 8px 28px rgba(0,0,0,.5);}
+.theme-card-preview{height:72px;position:relative;display:flex;align-items:flex-end;padding:8px 10px;overflow:hidden;}
+.theme-card-preview::after{content:'';position:absolute;inset:0;background:inherit;opacity:.06;}
+.tc-dot-row{display:flex;gap:5px;z-index:1;}
+.tc-dot{width:10px;height:10px;border-radius:50%;}
+.tc-active-badge{position:absolute;top:8px;right:8px;background:rgba(0,0,0,.55);border-radius:99px;padding:2px 8px;font-size:9px;font-family:var(--mono);color:#fff;letter-spacing:.5px;display:none;}
+.theme-card.active .tc-active-badge{display:block;}
+.theme-card-body{padding:10px 12px 12px;}
+.tc-name{font-size:13px;font-weight:700;color:var(--text);margin-bottom:2px;}
+.tc-desc{font-size:10px;color:var(--muted);font-family:var(--mono);line-height:1.5;}
+.theme-applied-msg{color:var(--green);font-size:12px;font-family:var(--mono);display:none;margin-top:10px;}
+
 .cfg-field{display:flex;flex-direction:column;gap:6px;}
 .cfg-label{font-size:11px;font-family:var(--mono);color:var(--muted);text-transform:uppercase;letter-spacing:.7px;}
 .cfg-row{display:flex;align-items:center;gap:12px;}
@@ -530,6 +597,76 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:1
 
     <div id="tab-settings" class="tp-tab">
       <div class="section-title">Settings</div>
+
+      <!-- THEME PICKER -->
+      <div class="settings-section">
+        <div class="ss-title">🎨 Panel Theme</div>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:20px;line-height:1.7;">Choose a colour theme for the Teacher Panel. Your preference is saved locally.</p>
+        <div class="theme-picker-grid">
+
+          <div class="theme-card active" id="tc-midnight" onclick="applyTheme('midnight')">
+            <div class="theme-card-preview" style="background:linear-gradient(135deg,#080c14,#0e1623);">
+              <div class="tc-dot-row">
+                <div class="tc-dot" style="background:#3b8bff;"></div>
+                <div class="tc-dot" style="background:#a78bfa;"></div>
+                <div class="tc-dot" style="background:#00d4ff;"></div>
+              </div>
+              <span class="tc-active-badge">ACTIVE</span>
+            </div>
+            <div class="theme-card-body">
+              <div class="tc-name">🌌 Midnight Blue</div>
+              <div class="tc-desc">Default dark navy<br/>Blue &amp; violet accents</div>
+            </div>
+          </div>
+
+          <div class="theme-card" id="tc-emerald" onclick="applyTheme('emerald')">
+            <div class="theme-card-preview" style="background:linear-gradient(135deg,#061210,#0b1e1a);">
+              <div class="tc-dot-row">
+                <div class="tc-dot" style="background:#10b981;"></div>
+                <div class="tc-dot" style="background:#34d399;"></div>
+                <div class="tc-dot" style="background:#06b6d4;"></div>
+              </div>
+              <span class="tc-active-badge">ACTIVE</span>
+            </div>
+            <div class="theme-card-body">
+              <div class="tc-name">🌿 Emerald Dark</div>
+              <div class="tc-desc">Deep forest tones<br/>Green &amp; teal accents</div>
+            </div>
+          </div>
+
+          <div class="theme-card" id="tc-crimson" onclick="applyTheme('crimson')">
+            <div class="theme-card-preview" style="background:linear-gradient(135deg,#0f0608,#1a0b0d);">
+              <div class="tc-dot-row">
+                <div class="tc-dot" style="background:#f43f5e;"></div>
+                <div class="tc-dot" style="background:#fb7185;"></div>
+                <div class="tc-dot" style="background:#f97316;"></div>
+              </div>
+              <span class="tc-active-badge">ACTIVE</span>
+            </div>
+            <div class="theme-card-body">
+              <div class="tc-name">🔴 Crimson Night</div>
+              <div class="tc-desc">Dark blood tones<br/>Red &amp; rose accents</div>
+            </div>
+          </div>
+
+          <div class="theme-card" id="tc-solar" onclick="applyTheme('solar')">
+            <div class="theme-card-preview" style="background:linear-gradient(135deg,#0d0a02,#1a1505);">
+              <div class="tc-dot-row">
+                <div class="tc-dot" style="background:#f59e0b;"></div>
+                <div class="tc-dot" style="background:#fbbf24;"></div>
+                <div class="tc-dot" style="background:#ef4444;"></div>
+              </div>
+              <span class="tc-active-badge">ACTIVE</span>
+            </div>
+            <div class="theme-card-body">
+              <div class="tc-name">☀️ Solar Gold</div>
+              <div class="tc-desc">Warm amber tones<br/>Gold &amp; amber accents</div>
+            </div>
+          </div>
+
+        </div>
+        <div class="theme-applied-msg" id="theme-applied-msg">✅ Theme applied!</div>
+      </div>
 
       <div class="settings-section">
         <div class="ss-title">🔐 Change Login Credentials</div>
@@ -1563,6 +1700,35 @@ function clearAllSubmissions(){
   if(!confirm('Clear ALL submissions? This cannot be undone.'))return;
   _clearSubmissions().catch(function(e){alert('Clear failed: '+e.message);});
 }
+
+/* ═══════ THEME SYSTEM ═══════ */
+var THEMES = ['midnight','emerald','crimson','solar'];
+
+function applyTheme(name){
+  if(!THEMES.includes(name)) name = 'midnight';
+  document.documentElement.setAttribute('data-theme', name);
+  localStorage.setItem('jm-teacher-theme', name);
+  // Update active card
+  THEMES.forEach(function(t){
+    var card = document.getElementById('tc-'+t);
+    if(card) card.classList.toggle('active', t===name);
+  });
+  // Flash message
+  var msg = document.getElementById('theme-applied-msg');
+  if(msg){
+    msg.style.display = 'block';
+    clearTimeout(msg._t);
+    msg._t = setTimeout(function(){ msg.style.display='none'; }, 2000);
+  }
+}
+window.applyTheme = applyTheme;
+
+function initTheme(){
+  var saved = localStorage.getItem('jm-teacher-theme') || 'midnight';
+  applyTheme(saved);
+}
+initTheme();
+
 window.clearAllSubmissions=clearAllSubmissions;
 </script>
 <script>
