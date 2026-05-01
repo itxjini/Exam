@@ -625,6 +625,7 @@ function doLogin(){
   var pass  = document.querySelector('.lf-input[type="password"]').value;
   var errEl = document.querySelector('.login-error');
   var btn   = document.querySelector('.btn-login');
+  if(!btn) return;
   // Show loading state
   btn.disabled = true; btn.textContent = 'Checking...';
   // Try DB credentials (already loaded), then check
@@ -656,8 +657,12 @@ function doLogin(){
 }
 window.doLogin = doLogin;
 
-document.querySelector('.lf-input[type="password"]').addEventListener('keydown',function(e){if(e.key==='Enter')doLogin();});
-document.querySelector('.lf-input[type="email"]').addEventListener('keydown',function(e){if(e.key==='Enter')doLogin();});
+document.addEventListener('DOMContentLoaded', function(){
+  var emailInput = document.querySelector('.lf-input[type="email"]');
+  var passInput  = document.querySelector('.lf-input[type="password"]');
+  if(emailInput) emailInput.addEventListener('keydown', function(e){ if(e.key==='Enter') doLogin(); });
+  if(passInput)  passInput.addEventListener('keydown',  function(e){ if(e.key==='Enter') doLogin(); });
+});
 
 function doLogout(){
   document.querySelector('#panel').style.display='none';
