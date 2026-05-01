@@ -149,3 +149,39 @@ export async function saveAdminCredentials(email, password) {
     .upsert({ id: 1, email, password }, { onConflict: "id" });
   if (error) throw new Error(error.message);
 }
+
+// ── Theme (stored in config table under key "portalTheme") ────────────
+export async function saveTheme(themeObj) {
+  const { error } = await supabase
+    .from(CONFIG_TABLE)
+    .upsert({ key: "portalTheme", value: themeObj }, { onConflict: "key" });
+  if (error) throw new Error(error.message);
+}
+
+export async function loadTheme() {
+  const { data, error } = await supabase
+    .from(CONFIG_TABLE)
+    .select("value")
+    .eq("key", "portalTheme")
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data ? data.value : null;
+}
+
+export function listenTheme(callback) {
+  loadTheme().then(callback).catch(console.error);
+
+  const channel = supabase
+    .channel("theme-changes")
+    .on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: CONFIG_TABLE, filter: "key=eq.portalTheme" },
+      (payload) => {
+        const val = payload.new ? payload.new.value : null;
+        callback(val);
+      }
+    )
+    .subscribe();
+
+  return () => supabase.removeChannel(channel);
+}
